@@ -1,0 +1,3314 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>美味小館 2.0・智慧線上點餐系統</title>
+  <!-- 引入 Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- 引入 Google Fonts：Noto Sans TC 與 Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700;800&family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet" />
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Noto Sans TC"', '"Inter"', 'system-ui', 'sans-serif'],
+            num: ['"Inter"', '"Noto Sans TC"', 'sans-serif'],
+          },
+          colors: {
+            terracotta: {
+              50: '#FDF4F1',
+              100: '#FCE6DF',
+              200: '#F8CABD',
+              300: '#F2A58F',
+              400: '#E77B5C',
+              500: '#D95D39',
+              600: '#C24D2B',
+              700: '#A13D20',
+              800: '#85351E',
+              900: '#6E2F1D',
+            },
+            cream: '#FAF8F5',
+            charcoal: '#1E293B',
+          }
+        }
+      }
+    };
+  </script>
+  <style>
+    /* 自訂捲軸與抽屜滑出動畫 */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #F5F2ED;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #CBD5E1;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94A3B8;
+    }
+    @keyframes slideUpDrawer {
+      from { transform: translateY(100%); opacity: 0.6; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+    .animate-drawer {
+      animation: slideUpDrawer 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+  </style>
+</head>
+<body class="bg-cream text-charcoal font-sans antialiased selection:bg-terracotta-200 selection:text-terracotta-900 pb-28 lg:pb-12 overflow-x-hidden">
+
+  <!-- 隱藏的 Iframe 通道：供 FormSubmit 備援表單直傳使用 -->
+  <iframe id="hiddenMailFrame" name="hidden_mail_frame" class="hidden" title="Hidden Email Dispatch Frame"></iframe>
+
+  <!-- ==================== 1. 頂部寄信狀態橫幅（預設顯示 Web3Forms 已就緒綠燈） ==================== -->
+  <div id="topEmailAlertBanner" class="bg-emerald-700 text-white px-4 py-2 text-xs sm:text-sm border-b border-emerald-800 transition-all">
+    <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
+      <div class="flex items-center gap-2 text-center sm:text-left">
+        <span class="inline-flex h-2.5 w-2.5 rounded-full bg-emerald-300 shrink-0 animate-pulse"></span>
+        <span id="topBannerMessage" class="font-bold">
+          寄信引擎已就緒・Web3Forms 自動收單已啟用
+        </span>
+      </div>
+      <button
+        type="button"
+        id="bannerOpenAdminBtn"
+        class="shrink-0 px-3 py-1 rounded-xl bg-white/15 hover:bg-white/25 text-white font-bold text-xs transition-all active:scale-95"
+      >
+        測試寄信 / 下載檔案 →
+      </button>
+    </div>
+  </div>
+
+  <!-- ==================== 2. 頂部品牌導覽列 ==================== -->
+  <header class="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-stone-200/90 shadow-xs">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between gap-2 sm:gap-3">
+      <!-- 左側品牌標誌 -->
+      <div class="flex items-center gap-2.5 sm:gap-3 min-w-0">
+        <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-br from-terracotta-500 to-terracotta-700 flex items-center justify-center shadow-md shadow-terracotta-500/25 shrink-0">
+          <!-- 台式經典碗筷 SVG 圖示 -->
+          <svg class="w-6 h-6 sm:w-7 sm:h-7 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 11h18" />
+            <path d="M4 11a8 8 0 0 0 16 0" />
+            <path d="M8 21h8" />
+            <path d="M12 19v2" />
+            <path d="M6 7l12-3" />
+            <path d="M6 4l12 2.5" />
+          </svg>
+        </div>
+        <div class="min-w-0">
+          <div class="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+            <h1 id="headerStoreName" class="text-base sm:text-xl font-black tracking-tight text-charcoal truncate">
+              美味小館
+            </h1>
+            <span class="text-[10px] sm:text-[11px] font-num font-extrabold px-2 py-0.5 rounded-full bg-terracotta-100 text-terracotta-700 border border-terracotta-200">
+              2.0 智慧點餐
+            </span>
+          </div>
+          <div class="flex items-center gap-2 mt-0.5 text-[11px] sm:text-xs text-slate-500">
+            <span class="inline-flex items-center gap-1.5 font-medium text-emerald-600">
+              <span class="relative flex h-2 w-2">
+                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+              </span>
+              營業中 • 現點現做
+            </span>
+            <span class="hidden sm:inline text-slate-300">|</span>
+            <span id="headerDeliveryRuleText" class="hidden sm:inline font-medium">外送滿 NT$300 免運費</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 右側功能按鈕：歷史訂單 + 老闆後台 -->
+      <div class="flex items-center gap-2 shrink-0">
+        <button
+          type="button"
+          id="openOrdersHistoryQuickBtn"
+          class="inline-flex items-center gap-1 px-2.5 py-2 sm:px-3.5 rounded-xl bg-stone-100 hover:bg-stone-200 text-charcoal font-bold text-xs sm:text-sm transition-colors"
+          title="查看歷史訂單"
+        >
+          <span>📋</span>
+          <span class="hidden sm:inline">訂單</span>
+          <span id="headerOrderCountBadge" class="font-num text-xs px-1.5 py-0.5 rounded-full bg-white text-charcoal border border-stone-200">0</span>
+        </button>
+
+        <button
+          type="button"
+          id="openAdminCenterBtn"
+          class="inline-flex items-center gap-1.5 sm:gap-2 px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl bg-charcoal hover:bg-slate-900 active:scale-95 text-white font-bold text-xs sm:text-sm shadow-sm transition-all"
+        >
+          <svg class="w-4 h-4 text-terracotta-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+            <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
+            <circle cx="12" cy="12" r="3" />
+          </svg>
+          <span>老闆後台</span>
+          <span id="adminStatusDot" class="w-2.5 h-2.5 rounded-full bg-emerald-400"></span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ==================== 3. 現代台式餐館橫幅與用餐模式快選 ==================== -->
+  <section class="bg-gradient-to-r from-charcoal via-slate-800 to-terracotta-900 text-white border-b border-stone-200">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 flex flex-col md:flex-row md:items-center md:justify-between gap-5">
+      <div class="space-y-2">
+        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-terracotta-500/25 border border-terracotta-400/30 text-terracotta-200 text-xs font-bold">
+          <span>✨ 客製化線上點餐</span>
+          <span>•</span>
+          <span>即時直達店家信箱</span>
+        </div>
+        <h2 class="text-2xl sm:text-3xl font-black tracking-tight">
+          匠心古早台味，現點現做熱騰騰上桌
+        </h2>
+        <p class="text-slate-300 text-xs sm:text-sm max-w-2xl leading-relaxed">
+          支援辣度、加料、飲品冰塊甜度客製調整。結帳輸入優惠碼 <code class="px-1.5 py-0.5 rounded bg-white/15 text-amber-300 font-num font-bold">WELCOME50</code> 現折 $50，或 <code class="px-1.5 py-0.5 rounded bg-white/15 text-amber-300 font-num font-bold">VIP88</code> 享 88 折！
+        </p>
+      </div>
+
+      <!-- 用餐模式快速切換卡片 -->
+      <div class="bg-white/10 backdrop-blur-md border border-white/15 rounded-2xl p-3 shrink-0">
+        <div class="text-[11px] font-bold text-slate-300 mb-2 px-1">選擇今日用餐方式：</div>
+        <div class="grid grid-cols-3 gap-1.5">
+          <button type="button" data-hero-dining="內用" class="hero-dining-btn px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all bg-terracotta-500 text-white shadow-sm">
+            🍽️ 內用
+          </button>
+          <button type="button" data-hero-dining="外帶自取" class="hero-dining-btn px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all text-slate-200 hover:bg-white/10">
+            🛍️ 外帶
+          </button>
+          <button type="button" data-hero-dining="店家外送" class="hero-dining-btn px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all text-slate-200 hover:bg-white/10">
+            🛵 外送
+          </button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== 4. 主內容雙欄區：左側菜單 + 右側固定購物車 ==================== -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 sm:pt-8">
+    <div class="flex flex-col lg:flex-row items-start gap-8">
+
+      <!-- 左側 2/3：分類頁籤、搜尋框與 14 道經典料理卡片 -->
+      <div class="w-full lg:w-2/3 space-y-6">
+        <!-- 搜尋與分類工具箱 -->
+        <div class="bg-white rounded-2xl p-4 shadow-xs border border-stone-200/90 space-y-4">
+          <div class="relative">
+            <svg class="w-5 h-5 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="11" cy="11" r="8" />
+              <path d="m21 21-4.3-4.3" />
+            </svg>
+            <input
+              id="searchInput"
+              type="text"
+              placeholder="搜尋餐點（例如：滷肉飯、牛肉麵、辣味、素食可、珍珠...）"
+              class="w-full pl-11 pr-10 py-3 rounded-xl bg-cream border border-stone-200 text-charcoal placeholder-slate-400 text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-terracotta-500 focus:border-terracotta-500 focus:bg-white transition-all"
+            />
+            <button
+              id="clearSearchBtn"
+              type="button"
+              class="hidden absolute right-3 top-1/2 -translate-y-1/2 p-1.5 text-slate-400 hover:text-charcoal rounded-lg"
+              title="清除搜尋"
+            >
+              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <path d="M18 6 6 18M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+
+          <!-- 分類頁籤 -->
+          <div id="categoryTabs" class="flex items-center gap-2 overflow-x-auto pb-1"></div>
+        </div>
+
+        <!-- 菜單標題列 -->
+        <div class="flex items-center justify-between px-1">
+          <h3 id="currentCategoryTitle" class="text-lg sm:text-xl font-black text-charcoal">
+            全部經典餐點
+          </h3>
+          <span id="menuCountBadge" class="text-xs sm:text-sm font-bold text-slate-500 bg-white border border-stone-200 px-3 py-1 rounded-full">
+            共 14 道餐點
+          </span>
+        </div>
+
+        <!-- 菜單卡片網格 -->
+        <div id="menuGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5"></div>
+
+        <!-- 無搜尋結果提示 -->
+        <div id="emptySearchState" class="hidden bg-white rounded-2xl border border-stone-200 p-10 text-center space-y-3">
+          <div class="text-4xl">🍲</div>
+          <h4 class="text-lg font-bold text-charcoal">找不到符合條件的餐點</h4>
+          <p class="text-sm text-slate-500">試試看其他關鍵字，或點選下方按鈕瀏覽所有招牌料理！</p>
+          <button
+            id="resetFilterBtn"
+            type="button"
+            class="mt-2 inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-terracotta-500 hover:bg-terracotta-600 text-white text-sm font-bold transition-colors"
+          >
+            顯示全部餐點
+          </button>
+        </div>
+      </div>
+
+      <!-- 右側 1/3：桌面版固定即時購物車 -->
+      <aside class="hidden lg:block lg:w-1/3 sticky top-24">
+        <div id="desktopCartContainer" class="bg-white rounded-3xl shadow-md border border-stone-200/90 overflow-hidden flex flex-col max-h-[calc(100vh-7.5rem)]"></div>
+      </aside>
+
+    </div>
+  </main>
+
+  <!-- ==================== 5. 手機版底部懸浮購物車條 ==================== -->
+  <div id="mobileCartBar" class="lg:hidden fixed bottom-0 inset-x-0 z-30 p-3 bg-white/95 backdrop-blur-md border-t border-stone-200 shadow-[0_-8px_25px_-5px_rgba(0,0,0,0.08)]">
+    <div class="max-w-lg mx-auto">
+      <button
+        id="openMobileCartBtn"
+        type="button"
+        class="w-full flex items-center justify-between bg-charcoal hover:bg-slate-900 active:scale-[0.99] text-white px-4 py-3 rounded-2xl shadow-lg transition-all"
+      >
+        <div class="flex items-center gap-3">
+          <div class="relative bg-terracotta-500 p-2 rounded-xl">
+            <svg class="w-5 h-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+              <circle cx="8" cy="21" r="1" />
+              <circle cx="19" cy="21" r="1" />
+              <path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12" />
+            </svg>
+            <span id="mobileBadgeCount" class="absolute -top-1.5 -right-1.5 min-w-[20px] h-5 px-1 rounded-full bg-amber-400 text-charcoal font-num text-xs font-black flex items-center justify-center border-2 border-charcoal">
+              0
+            </span>
+          </div>
+          <div class="text-left">
+            <div class="text-[11px] text-slate-300">檢視購物車與優惠碼</div>
+            <div id="mobileBarTotal" class="text-base font-num font-extrabold text-white">NT$ 0</div>
+          </div>
+        </div>
+        <span class="inline-flex items-center gap-1 bg-terracotta-500 text-white text-sm font-bold px-3.5 py-2 rounded-xl">
+          <span>查看結帳</span>
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="m9 18 6-6-6-6" />
+          </svg>
+        </span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ==================== 6. 手機版滑出式結帳抽屜 ==================== -->
+  <div id="mobileCartDrawer" class="hidden fixed inset-0 z-40 lg:hidden">
+    <div id="mobileCartBackdrop" class="fixed inset-0 bg-charcoal/60 backdrop-blur-xs"></div>
+    <div class="fixed inset-x-0 bottom-0 max-h-[90vh] bg-white rounded-t-3xl shadow-2xl flex flex-col overflow-hidden animate-drawer">
+      <div class="w-12 h-1.5 bg-stone-300 rounded-full mx-auto mt-3 mb-1 shrink-0"></div>
+      <div id="mobileDrawerCartContainer" class="flex-1 flex flex-col overflow-hidden"></div>
+    </div>
+  </div>
+
+  <!-- ==================== 7. 餐點客製化規格彈窗 (Customization Modal) ==================== -->
+  <div id="customModal" class="hidden fixed inset-0 z-50 overflow-y-auto">
+    <div id="customModalBackdrop" class="fixed inset-0 bg-charcoal/70 backdrop-blur-xs"></div>
+    <div class="relative min-h-screen flex items-center justify-center p-4">
+      <div class="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-stone-200 overflow-hidden my-6">
+        <!-- 頂部餐點介紹 -->
+        <div class="bg-cream px-6 py-5 border-b border-stone-200 flex items-start justify-between gap-4">
+          <div class="flex items-center gap-4">
+            <div id="customModalSvgBox" class="w-16 h-16 rounded-2xl bg-white border border-stone-200 flex items-center justify-center shrink-0 p-1"></div>
+            <div>
+              <span id="customModalCategory" class="text-[11px] font-bold text-terracotta-600 bg-terracotta-50 px-2 py-0.5 rounded-md"></span>
+              <h3 id="customModalTitle" class="text-lg sm:text-xl font-black text-charcoal mt-1"></h3>
+              <p id="customModalBasePrice" class="text-sm font-num font-bold text-terracotta-600 mt-0.5"></p>
+            </div>
+          </div>
+          <button type="button" id="closeCustomModalBtn" class="p-2.5 rounded-xl text-slate-400 hover:text-charcoal hover:bg-stone-200/70 transition-colors">
+            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path d="M18 6 6 18M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <!-- 客製化選項內容 -->
+        <div class="p-6 space-y-5 max-h-[65vh] overflow-y-auto">
+          <!-- 辣度選擇（非飲品顯示） -->
+          <div id="customSpiceSection" class="space-y-2">
+            <div class="flex items-center justify-between">
+              <label class="text-sm font-black text-charcoal">🌶️ 辣度選擇</label>
+              <span class="text-xs text-slate-400">必選</span>
+            </div>
+            <div id="customSpiceOptions" class="grid grid-cols-4 gap-2"></div>
+          </div>
+
+          <!-- 飲品冰塊與甜度（飲品類顯示） -->
+          <div id="customDrinkSection" class="hidden space-y-4">
+            <div class="space-y-2">
+              <div class="flex items-center justify-between">
+                <label class="text-sm font-black text-charcoal">🧊 冰塊調整</label>
+                <span class="text-xs text-slate-400">必選</span>
+              </div>
+              <div id="customIceOptions" class="grid grid-cols-5 gap-1.5"></div>
+            </div>
+            <div class="space-y-2">
+              <div class="flex items-center justify-between">
+                <label class="text-sm font-black text-charcoal">🍯 甜度調整</label>
+                <span class="text-xs text-slate-400">必選</span>
+              </div>
+              <div id="customSugarOptions" class="grid grid-cols-5 gap-1.5"></div>
+            </div>
+          </div>
+
+          <!-- 加料加購區（非飲品顯示） -->
+          <div id="customAddonsSection" class="space-y-2">
+            <div class="flex items-center justify-between">
+              <label class="text-sm font-black text-charcoal">🍳 美味加料加購</label>
+              <span class="text-xs text-slate-400">可複選</span>
+            </div>
+            <div id="customAddonsOptions" class="grid grid-cols-2 gap-2"></div>
+          </div>
+
+          <!-- 單品客製備註 -->
+          <div class="space-y-2">
+            <label for="customItemNoteInput" class="block text-sm font-black text-charcoal">
+              📝 單品客製備註 <span class="text-xs font-normal text-slate-400">（選填）</span>
+            </label>
+            <div class="flex flex-wrap gap-1.5">
+              <button type="button" class="item-quick-note px-3 py-1.5 rounded-lg bg-stone-100 hover:bg-terracotta-100 hover:text-terracotta-800 text-xs font-medium text-slate-600 transition-colors" data-note="不要香菜">+ 不要香菜</button>
+              <button type="button" class="item-quick-note px-3 py-1.5 rounded-lg bg-stone-100 hover:bg-terracotta-100 hover:text-terracotta-800 text-xs font-medium text-slate-600 transition-colors" data-note="蔥多">+ 蔥多</button>
+              <button type="button" class="item-quick-note px-3 py-1.5 rounded-lg bg-stone-100 hover:bg-terracotta-100 hover:text-terracotta-800 text-xs font-medium text-slate-600 transition-colors" data-note="少油">+ 少油</button>
+              <button type="button" class="item-quick-note px-3 py-1.5 rounded-lg bg-stone-100 hover:bg-terracotta-100 hover:text-terracotta-800 text-xs font-medium text-slate-600 transition-colors" data-note="醬汁分開">+ 醬汁分開</button>
+            </div>
+            <input
+              id="customItemNoteInput"
+              type="text"
+              placeholder="輸入單品特殊需求（例如：麵條偏硬、不要酸菜...）"
+              class="w-full px-3.5 py-2.5 rounded-xl border border-stone-300 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-terracotta-500"
+            />
+          </div>
+        </div>
+
+        <!-- 底部數量與確認加入按鈕 -->
+        <div class="px-6 py-4 bg-cream border-t border-stone-200 flex items-center justify-between gap-4">
+          <div class="flex items-center gap-2 bg-white border border-stone-200 rounded-2xl p-1">
+            <button type="button" id="customQtyDecBtn" class="w-10 h-10 rounded-xl hover:bg-stone-100 text-charcoal font-black text-lg flex items-center justify-center">−</button>
+            <span id="customQtyDisplay" class="w-8 text-center font-num font-black text-base text-charcoal">1</span>
+            <button type="button" id="customQtyIncBtn" class="w-10 h-10 rounded-xl bg-terracotta-500 text-white font-black text-lg flex items-center justify-center">+</button>
+          </div>
+
+          <button
+            type="button"
+            id="confirmAddCustomItemBtn"
+            class="flex-1 py-3.5 px-5 rounded-2xl bg-terracotta-500 hover:bg-terracotta-600 active:scale-[0.99] text-white font-black text-sm sm:text-base shadow-lg shadow-terracotta-500/25 flex items-center justify-between transition-all"
+          >
+            <span>加入購物車</span>
+            <span id="customCalculatedTotal" class="font-num font-extrabold">NT$ 0</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== 8. 結帳填寫資料 Modal ==================== -->
+  <div id="checkoutModal" class="hidden fixed inset-0 z-50 overflow-y-auto">
+    <div class="fixed inset-0 bg-charcoal/70 backdrop-blur-xs"></div>
+    <div class="relative min-h-screen flex items-center justify-center p-4">
+      <div class="relative w-full max-w-2xl bg-white rounded-3xl shadow-2xl border border-stone-200 overflow-hidden my-6">
+        <!-- 標題列 -->
+        <div class="bg-charcoal text-white px-6 py-4 flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <span class="w-9 h-9 rounded-xl bg-terracotta-500 flex items-center justify-center text-lg">🧾</span>
+            <div>
+              <h3 class="text-lg font-black">確認結帳與用餐資訊</h3>
+              <p class="text-xs text-slate-300">送單後將即時透過 Web3Forms 寄送訂單明細至店家信箱</p>
+            </div>
+          </div>
+          <button type="button" id="closeCheckoutModalBtn" class="p-2.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors">
+            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path d="M18 6 6 18M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <form id="checkoutForm" novalidate class="p-5 sm:p-6 space-y-5 max-h-[82vh] overflow-y-auto">
+          <!-- 目前寄信引擎狀態條 -->
+          <div id="checkoutEngineBanner" class="rounded-2xl p-3.5 border flex items-center justify-between gap-3 text-xs sm:text-sm"></div>
+
+          <!-- 用餐模式三選一 -->
+          <div class="space-y-2">
+            <label class="block text-sm font-black text-charcoal">
+              用餐方式 <span class="text-red-500">*</span>
+            </label>
+            <div class="grid grid-cols-3 gap-2.5">
+              <label class="cursor-pointer">
+                <input type="radio" name="checkoutDiningType" value="內用" class="peer sr-only" checked />
+                <div class="p-3 rounded-2xl border-2 border-stone-200 peer-checked:border-terracotta-500 peer-checked:bg-terracotta-50 text-center transition-all">
+                  <div class="text-xl mb-0.5">🍽️</div>
+                  <div class="text-sm font-bold text-charcoal">內用</div>
+                  <div class="text-[11px] text-slate-500">選擇桌號</div>
+                </div>
+              </label>
+              <label class="cursor-pointer">
+                <input type="radio" name="checkoutDiningType" value="外帶自取" class="peer sr-only" />
+                <div class="p-3 rounded-2xl border-2 border-stone-200 peer-checked:border-terracotta-500 peer-checked:bg-terracotta-50 text-center transition-all">
+                  <div class="text-xl mb-0.5">🛍️</div>
+                  <div class="text-sm font-bold text-charcoal">外帶自取</div>
+                  <div class="text-[11px] text-slate-500">預約取餐</div>
+                </div>
+              </label>
+              <label class="cursor-pointer">
+                <input type="radio" name="checkoutDiningType" value="店家外送" class="peer sr-only" />
+                <div class="p-3 rounded-2xl border-2 border-stone-200 peer-checked:border-terracotta-500 peer-checked:bg-terracotta-50 text-center transition-all">
+                  <div class="text-xl mb-0.5">🛵</div>
+                  <div class="text-sm font-bold text-charcoal">店家外送</div>
+                  <div id="checkoutDeliveryBadgeHint" class="text-[11px] text-slate-500">滿$300免運</div>
+                </div>
+              </label>
+            </div>
+          </div>
+
+          <!-- 動態用餐細節欄位：內用桌號 (A1~B6) -->
+          <div id="checkoutTableSection" class="space-y-2">
+            <label class="block text-sm font-black text-charcoal">
+              選擇內用桌號（A1 ~ B6） <span class="text-red-500">*</span>
+            </label>
+            <div id="tableQuickGrid" class="grid grid-cols-6 gap-1.5"></div>
+            <p id="checkoutTableError" class="hidden text-xs font-bold text-red-600">請點選一個內用桌號</p>
+          </div>
+
+          <!-- 動態用餐細節欄位：外帶預計取餐時間 -->
+          <div id="checkoutPickupSection" class="hidden space-y-1.5">
+            <label for="pickupTimeSelect" class="block text-sm font-black text-charcoal">
+              預計取餐時間 <span class="text-red-500">*</span>
+            </label>
+            <select
+              id="pickupTimeSelect"
+              class="w-full px-4 py-3 rounded-xl border border-stone-300 text-charcoal bg-white font-medium focus:outline-none focus:ring-2 focus:ring-terracotta-500"
+            >
+              <option value="立即製作（約 15–20 分鐘後取餐）">立即製作（約 15–20 分鐘後取餐）</option>
+              <option value="25 分鐘後取餐">25 分鐘後取餐</option>
+              <option value="30 分鐘後取餐">30 分鐘後取餐</option>
+              <option value="45 分鐘後取餐">45 分鐘後取餐</option>
+              <option value="1 小時後取餐">1 小時後取餐</option>
+            </select>
+          </div>
+
+          <!-- 動態用餐細節欄位：外送地址 -->
+          <div id="checkoutAddressSection" class="hidden space-y-1.5">
+            <div class="flex items-center justify-between">
+              <label for="deliveryAddressInput" class="block text-sm font-black text-charcoal">
+                外送地址 <span class="text-red-500">*</span>
+              </label>
+              <span id="checkoutAddressFeeNote" class="text-xs font-bold text-terracotta-600"></span>
+            </div>
+            <input
+              id="deliveryAddressInput"
+              type="text"
+              placeholder="請輸入完整外送地址（例如：新北市新莊區中正路100號3樓）"
+              class="w-full px-4 py-3 rounded-xl border border-stone-300 text-charcoal focus:outline-none focus:ring-2 focus:ring-terracotta-500"
+            />
+            <p id="checkoutAddressError" class="hidden text-xs font-bold text-red-600">請輸入完整的外送地址</p>
+          </div>
+
+          <!-- 顧客姓名與聯絡電話 -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div class="space-y-1.5">
+              <label for="customerNameInput" class="block text-sm font-black text-charcoal">
+                顧客姓名 <span class="text-red-500">*</span>
+              </label>
+              <input
+                id="customerNameInput"
+                type="text"
+                placeholder="例如：陳先生 / 林小姐"
+                class="w-full px-4 py-3 rounded-xl border border-stone-300 text-charcoal focus:outline-none focus:ring-2 focus:ring-terracotta-500"
+              />
+              <p id="checkoutNameError" class="hidden text-xs font-bold text-red-600">請輸入顧客姓名</p>
+            </div>
+
+            <div class="space-y-1.5">
+              <label for="customerPhoneInput" class="block text-sm font-black text-charcoal">
+                聯絡電話 <span class="text-red-500">*</span>
+              </label>
+              <input
+                id="customerPhoneInput"
+                type="tel"
+                placeholder="例如：0912-345-678"
+                class="w-full px-4 py-3 rounded-xl border border-stone-300 text-charcoal font-num focus:outline-none focus:ring-2 focus:ring-terracotta-500"
+              />
+              <p id="checkoutPhoneError" class="hidden text-xs font-bold text-red-600">請輸入有效的聯絡電話</p>
+            </div>
+          </div>
+
+          <!-- 付款方式四選一 -->
+          <div class="space-y-2">
+            <label class="block text-sm font-black text-charcoal">
+              付款方式 <span class="text-red-500">*</span>
+            </label>
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              <label class="cursor-pointer">
+                <input type="radio" name="paymentMethod" value="現場現金" class="peer sr-only" checked />
+                <div class="p-2.5 rounded-xl border-2 border-stone-200 peer-checked:border-terracotta-500 peer-checked:bg-terracotta-50 text-center text-xs sm:text-sm font-bold text-charcoal transition-all">
+                  💵 現場現金
+                </div>
+              </label>
+              <label class="cursor-pointer">
+                <input type="radio" name="paymentMethod" value="LINE Pay" class="peer sr-only" />
+                <div class="p-2.5 rounded-xl border-2 border-stone-200 peer-checked:border-terracotta-500 peer-checked:bg-terracotta-50 text-center text-xs sm:text-sm font-bold text-charcoal transition-all">
+                  💚 LINE Pay
+                </div>
+              </label>
+              <label class="cursor-pointer">
+                <input type="radio" name="paymentMethod" value="街口支付" class="peer sr-only" />
+                <div class="p-2.5 rounded-xl border-2 border-stone-200 peer-checked:border-terracotta-500 peer-checked:bg-terracotta-50 text-center text-xs sm:text-sm font-bold text-charcoal transition-all">
+                  🧧 街口支付
+                </div>
+              </label>
+              <label class="cursor-pointer">
+                <input type="radio" name="paymentMethod" value="信用卡" class="peer sr-only" />
+                <div class="p-2.5 rounded-xl border-2 border-stone-200 peer-checked:border-terracotta-500 peer-checked:bg-terracotta-50 text-center text-xs sm:text-sm font-bold text-charcoal transition-all">
+                  💳 信用卡
+                </div>
+              </label>
+            </div>
+          </div>
+
+          <!-- 整筆訂單備註 -->
+          <div class="space-y-1.5">
+            <label for="orderNotesInput" class="block text-sm font-black text-charcoal">
+              訂單備註 <span class="text-xs font-normal text-slate-400">（選填）</span>
+            </label>
+            <textarea
+              id="orderNotesInput"
+              rows="2"
+              placeholder="例如：需要免洗餐具 2 份、統編 12345678、抵達前請電聯..."
+              class="w-full px-4 py-2.5 rounded-xl border border-stone-300 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-terracotta-500"
+            ></textarea>
+          </div>
+
+          <!-- 結帳金額總覽 -->
+          <div class="bg-cream rounded-2xl p-4 border border-stone-200 space-y-2">
+            <div class="text-xs font-bold uppercase tracking-wider text-slate-400">點餐明細與金額總覽</div>
+            <div id="checkoutItemsList" class="space-y-1.5 text-xs sm:text-sm text-charcoal max-h-36 overflow-y-auto pr-1"></div>
+            <div class="border-t border-stone-200 pt-2.5 space-y-1 text-xs sm:text-sm">
+              <div class="flex justify-between text-slate-600">
+                <span>餐點小計（<span id="checkoutQtyCount" class="font-num font-bold">0</span> 份）</span>
+                <span id="checkoutSubtotalText" class="font-num font-bold">NT$ 0</span>
+              </div>
+              <div id="checkoutDiscountRow" class="hidden flex justify-between text-emerald-600 font-bold">
+                <span>優惠碼折扣（<span id="checkoutPromoTag" class="font-num"></span>）</span>
+                <span id="checkoutDiscountText" class="font-num">-NT$ 0</span>
+              </div>
+              <div class="flex justify-between text-slate-600">
+                <span>外送運費</span>
+                <span id="checkoutDeliveryText" class="font-num font-bold">NT$ 0</span>
+              </div>
+              <div class="flex justify-between items-baseline pt-2 border-t border-dashed border-stone-300">
+                <span class="font-black text-charcoal">應付總金額</span>
+                <span id="checkoutGrandTotalText" class="text-xl font-num font-black text-terracotta-600">NT$ 0</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 按鈕列 -->
+          <div class="flex flex-col sm:flex-row gap-3 pt-1">
+            <button
+              type="button"
+              id="cancelCheckoutBtn"
+              class="sm:w-1/3 py-3.5 px-4 rounded-2xl border border-stone-300 text-charcoal font-bold hover:bg-stone-100 transition-colors"
+            >
+              返回修改
+            </button>
+            <button
+              type="submit"
+              id="submitOrderBtn"
+              class="sm:w-2/3 py-3.5 px-6 rounded-2xl bg-terracotta-500 hover:bg-terracotta-600 active:scale-[0.99] text-white font-black text-base shadow-lg shadow-terracotta-500/25 flex items-center justify-center gap-2 transition-all"
+            >
+              <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <path d="m22 2-7 20-4-9-9-4Z" />
+                <path d="M22 2 11 13" />
+              </svg>
+              <span>確認送出訂單</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== 9. 送單進度追蹤視窗 (3-Step Sending Progress Modal) ==================== -->
+  <div id="sendingProgressModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-charcoal/80 backdrop-blur-xs">
+    <div class="w-full max-w-md bg-white rounded-3xl shadow-2xl border border-stone-200 p-6 sm:p-7 space-y-6">
+      <div class="text-center space-y-2">
+        <div class="w-14 h-14 rounded-2xl bg-terracotta-100 text-terracotta-600 mx-auto flex items-center justify-center text-2xl animate-bounce">
+          📨
+        </div>
+        <h3 class="text-xl font-black text-charcoal">正在為您派送訂單...</h3>
+        <p id="progressEngineLabel" class="text-xs text-slate-500 font-medium">正在啟動 Web3Forms 寄信引擎</p>
+      </div>
+
+      <!-- 三步驟進度追蹤條 -->
+      <div class="space-y-3 bg-cream p-4 rounded-2xl border border-stone-200">
+        <div id="step1Row" class="flex items-center gap-3 text-sm font-bold text-slate-400">
+          <span id="step1Icon" class="w-7 h-7 rounded-full bg-stone-200 text-slate-500 flex items-center justify-center text-xs font-num">1</span>
+          <span>建立訂單明細</span>
+        </div>
+        <div id="step2Row" class="flex items-center gap-3 text-sm font-bold text-slate-400">
+          <span id="step2Icon" class="w-7 h-7 rounded-full bg-stone-200 text-slate-500 flex items-center justify-center text-xs font-num">2</span>
+          <span id="step2Label">連線 Web3Forms 寄信伺服器</span>
+        </div>
+        <div id="step3Row" class="flex items-center gap-3 text-sm font-bold text-slate-400">
+          <span id="step3Icon" class="w-7 h-7 rounded-full bg-stone-200 text-slate-500 flex items-center justify-center text-xs font-num">3</span>
+          <span>訂單確認與收據憑證</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== 10. 訂單完成收據與補寄保證 Modal ==================== -->
+  <div id="receiptModal" class="hidden fixed inset-0 z-50 overflow-y-auto">
+    <div class="fixed inset-0 bg-charcoal/75 backdrop-blur-xs"></div>
+    <div class="relative min-h-screen flex items-center justify-center p-4">
+      <div class="relative w-full max-w-xl bg-white rounded-3xl shadow-2xl border border-stone-200 overflow-hidden my-6">
+        <!-- 頂部成功標題 -->
+        <div class="bg-gradient-to-br from-charcoal to-slate-800 text-white p-6 text-center">
+          <div class="w-14 h-14 rounded-2xl bg-emerald-500 mx-auto flex items-center justify-center mb-3 shadow-lg shadow-emerald-500/30">
+            <svg class="w-8 h-8 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
+          </div>
+          <h3 class="text-2xl font-black tracking-tight">訂單已送出完成！</h3>
+          <div class="mt-2 inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-white/10 text-amber-300 font-num text-xs font-bold">
+            <span>訂單編號：</span>
+            <span id="receiptOrderId">#ORD-20261124-001</span>
+          </div>
+        </div>
+
+        <div class="p-5 sm:p-6 space-y-5 max-h-[78vh] overflow-y-auto">
+          <!-- 醒目寄信狀態徽章卡片 -->
+          <div id="receiptStatusBadgeBox" class="rounded-2xl p-4 border space-y-1.5"></div>
+
+          <!-- 顧客與取餐資訊 -->
+          <div class="bg-cream rounded-2xl p-4 border border-stone-200 space-y-2 text-xs sm:text-sm">
+            <div class="flex justify-between">
+              <span class="text-slate-500">下單時間</span>
+              <span id="receiptTime" class="font-num font-bold text-charcoal"></span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-slate-500">顧客資訊</span>
+              <span id="receiptCustomer" class="font-bold text-charcoal"></span>
+            </div>
+            <div class="flex justify-between items-start gap-4">
+              <span class="text-slate-500 shrink-0">用餐方式</span>
+              <span id="receiptDining" class="font-bold text-terracotta-600 text-right"></span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-slate-500">付款方式</span>
+              <span id="receiptPayment" class="font-bold text-charcoal"></span>
+            </div>
+            <div class="flex justify-between items-start gap-4">
+              <span class="text-slate-500 shrink-0">訂單備註</span>
+              <span id="receiptNotes" class="text-slate-700 text-right"></span>
+            </div>
+          </div>
+
+          <!-- 餐點明細 -->
+          <div class="space-y-2">
+            <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400">點餐客製化明細</h4>
+            <div id="receiptItemsList" class="divide-y divide-stone-100 border border-stone-200 rounded-2xl px-4 py-1 bg-white"></div>
+
+            <div class="bg-charcoal text-white rounded-2xl p-4 space-y-1.5 text-xs sm:text-sm">
+              <div class="flex justify-between text-slate-300">
+                <span>餐點小計</span>
+                <span id="receiptSubtotal" class="font-num">NT$ 0</span>
+              </div>
+              <div id="receiptDiscountRow" class="hidden flex justify-between text-emerald-400 font-bold">
+                <span>優惠碼折扣</span>
+                <span id="receiptDiscount" class="font-num">-NT$ 0</span>
+              </div>
+              <div class="flex justify-between text-slate-300">
+                <span>外送運費</span>
+                <span id="receiptDelivery" class="font-num">NT$ 0</span>
+              </div>
+              <div class="flex justify-between items-baseline pt-2 border-t border-slate-700">
+                <span class="font-bold">應付總金額</span>
+                <span id="receiptGrandTotal" class="text-2xl font-num font-black text-terracotta-400">NT$ 0</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 重試寄送、複製明細與完成按鈕 -->
+          <div class="space-y-2.5 pt-1">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              <button
+                type="button"
+                id="receiptRetryBtn"
+                class="py-3 px-4 rounded-2xl bg-terracotta-50 border-2 border-terracotta-300 hover:bg-terracotta-100 text-terracotta-800 font-black text-xs sm:text-sm flex items-center justify-center gap-2 transition-colors"
+              >
+                <span>🔄 重試寄送至信箱</span>
+              </button>
+
+              <button
+                type="button"
+                id="receiptCopyBtn"
+                class="py-3 px-4 rounded-2xl bg-stone-100 hover:bg-stone-200 text-charcoal font-black text-xs sm:text-sm flex items-center justify-center gap-2 transition-colors"
+              >
+                <span>📋 複製訂單明細</span>
+              </button>
+            </div>
+
+            <button
+              type="button"
+              id="closeReceiptAndContinueBtn"
+              class="w-full py-3.5 px-6 rounded-2xl bg-charcoal hover:bg-slate-900 text-white font-black text-base shadow-lg transition-all"
+            >
+              完成並繼續點餐
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== 11. 老闆後台管理中心 (Modal 三大分頁設計) ==================== -->
+  <div id="adminCenterModal" class="hidden fixed inset-0 z-50 overflow-y-auto">
+    <div class="fixed inset-0 bg-charcoal/75 backdrop-blur-xs"></div>
+    <div class="relative min-h-screen flex items-center justify-center p-3 sm:p-4">
+      <div class="relative w-full max-w-4xl bg-white rounded-3xl shadow-2xl border border-stone-200 overflow-hidden my-4 flex flex-col max-h-[92vh]">
+        <!-- 後台頂部標題列 -->
+        <div class="bg-charcoal text-white px-5 sm:px-6 py-4 flex items-center justify-between shrink-0">
+          <div class="flex items-center gap-3">
+            <span class="w-9 h-9 rounded-xl bg-terracotta-500 flex items-center justify-center text-lg">🛠️</span>
+            <div>
+              <h3 class="text-base sm:text-lg font-black">老闆後台管理中心</h3>
+              <p class="text-xs text-slate-300">Web3Forms 自動寄信已啟用 • 手機一鍵下載 • 歷史訂單</p>
+            </div>
+          </div>
+          <button type="button" id="closeAdminCenterBtn" class="p-2.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800">
+            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path d="M18 6 6 18M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <!-- 後台三大分頁切換導覽 -->
+        <div class="bg-cream border-b border-stone-200 px-4 sm:px-6 pt-3 flex items-center gap-2 overflow-x-auto shrink-0">
+          <button type="button" data-admin-tab="email" class="admin-tab-btn px-4 py-2.5 rounded-t-xl font-black text-xs sm:text-sm border-b-2 border-terracotta-500 bg-white text-terracotta-600 shrink-0">
+            1️⃣ 寄信設定 & 手機一鍵下載
+          </button>
+          <button type="button" data-admin-tab="orders" class="admin-tab-btn px-4 py-2.5 rounded-t-xl font-bold text-xs sm:text-sm border-b-2 border-transparent text-slate-500 hover:text-charcoal shrink-0">
+            2️⃣ 歷史訂單管理 (<span id="tabOrdersCount" class="font-num">0</span>)
+          </button>
+          <button type="button" data-admin-tab="menu" class="admin-tab-btn px-4 py-2.5 rounded-t-xl font-bold text-xs sm:text-sm border-b-2 border-transparent text-slate-500 hover:text-charcoal shrink-0">
+            3️⃣ 菜單庫存與店鋪設定
+          </button>
+        </div>
+
+        <!-- 後台分頁內容滾動區 -->
+        <div class="p-5 sm:p-6 overflow-y-auto flex-1 space-y-6">
+
+          <!-- ========== 分頁一：寄信設定 & 手機一鍵下載 ========== -->
+          <div id="adminTabPanel-email" class="admin-tab-panel space-y-6">
+            <!-- 手機版超方便：一鍵下載完整 HTML 檔案卡片 -->
+            <div class="bg-gradient-to-r from-emerald-50 to-teal-50 border-2 border-emerald-200 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div class="space-y-1">
+                <div class="inline-flex items-center gap-1.5 text-xs font-black text-emerald-800 bg-emerald-200/70 px-2.5 py-0.5 rounded-full">
+                  <span>📱 手機發布專用</span>
+                </div>
+                <h4 class="text-base font-black text-charcoal">免改程式碼！直接下載已含您金鑰的網頁檔</h4>
+                <p class="text-xs text-slate-600 leading-relaxed">
+                  您的 Web3Forms 金鑰已永久寫入本網頁程式中。點選右側按鈕即可在手機下載 <code class="font-num font-bold text-emerald-800">index.html</code>，直接上傳至 Netlify Drop 或 Cloudflare Pages 即可上線！
+                </p>
+              </div>
+              <button
+                type="button"
+                id="downloadHtmlFileBtn"
+                class="w-full sm:w-auto shrink-0 px-5 py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-black text-sm shadow-lg shadow-emerald-600/25 flex items-center justify-center gap-2 transition-all"
+              >
+                <span>📥 下載完整網頁檔案 (index.html)</span>
+              </button>
+            </div>
+
+            <!-- 四種引擎選擇卡片 -->
+            <div class="space-y-2.5">
+              <label class="block text-sm font-black text-charcoal">寄信引擎選擇（預設已啟用 Web3Forms）：</label>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <label class="cursor-pointer">
+                  <input type="radio" name="emailEngineRadio" value="web3forms" class="peer sr-only" checked />
+                  <div class="p-3.5 rounded-2xl border-2 border-stone-200 peer-checked:border-terracotta-500 peer-checked:bg-terracotta-50/70 transition-all h-full">
+                    <div class="flex items-center justify-between">
+                      <span class="font-black text-sm text-charcoal">引擎 1：Web3Forms API</span>
+                      <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">已預先設定・直達收單</span>
+                    </div>
+                    <p class="text-xs text-slate-500 mt-1">已內建您的專屬 Access Key，訂單將自動寄送至您申請金鑰時綁定的信箱。</p>
+                  </div>
+                </label>
+
+                <label class="cursor-pointer">
+                  <input type="radio" name="emailEngineRadio" value="emailjs" class="peer sr-only" />
+                  <div class="p-3.5 rounded-2xl border-2 border-stone-200 peer-checked:border-terracotta-500 peer-checked:bg-terracotta-50/70 transition-all h-full">
+                    <div class="flex items-center justify-between">
+                      <span class="font-black text-sm text-charcoal">引擎 2：EmailJS API</span>
+                      <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-sky-100 text-sky-800">備援引擎</span>
+                    </div>
+                    <p class="text-xs text-slate-500 mt-1">可串接自有 Gmail/Outlook 帳號發信，支援自訂 HTML 訂單通知模板。</p>
+                  </div>
+                </label>
+
+                <label class="cursor-pointer">
+                  <input type="radio" name="emailEngineRadio" value="formsubmit" class="peer sr-only" />
+                  <div class="p-3.5 rounded-2xl border-2 border-stone-200 peer-checked:border-terracotta-500 peer-checked:bg-terracotta-50/70 transition-all h-full">
+                    <div class="flex items-center justify-between">
+                      <span class="font-black text-sm text-charcoal">引擎 3：FormSubmit.co</span>
+                      <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">雙保險通道</span>
+                    </div>
+                    <p class="text-xs text-slate-500 mt-1">支援 AJAX 與隱藏表單雙通道派送，需填寫收單信箱並完成首次驗證。</p>
+                  </div>
+                </label>
+
+                <label class="cursor-pointer">
+                  <input type="radio" name="emailEngineRadio" value="mailto" class="peer sr-only" />
+                  <div class="p-3.5 rounded-2xl border-2 border-stone-200 peer-checked:border-terracotta-500 peer-checked:bg-terracotta-50/70 transition-all h-full">
+                    <div class="flex items-center justify-between">
+                      <span class="font-black text-sm text-charcoal">引擎 4：本機信箱 App 直發</span>
+                      <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-stone-200 text-charcoal">手動備援</span>
+                    </div>
+                    <p class="text-xs text-slate-500 mt-1">喚起裝置預設郵件程式（Gmail / Apple Mail），自動帶入主旨與完整明細。</p>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            <!-- 引擎動態參數輸入表單 -->
+            <div class="bg-cream rounded-2xl p-4 sm:p-5 border border-stone-200 space-y-4">
+              <!-- Web3Forms 專屬欄位 -->
+              <div id="engineFields-web3forms" class="space-y-2.5">
+                <div class="space-y-1.5">
+                  <label for="web3formsKeyInput" class="block text-sm font-black text-charcoal">
+                    Web3Forms Access Key <span class="text-xs font-bold text-emerald-600">（已預先填入）</span>
+                  </label>
+                  <input
+                    id="web3formsKeyInput"
+                    type="text"
+                    value="F9ac431d-9680-439a-b106-c1d38d6d5fc1"
+                    class="w-full px-4 py-2.5 rounded-xl border border-emerald-400 bg-white text-charcoal font-num font-bold text-sm focus:outline-none focus:ring-2 focus:ring-terracotta-500"
+                  />
+                </div>
+                <p class="text-xs text-slate-600">
+                  ✅ Web3Forms 會直接將所有顧客訂單寄送到您當初申請此 Access Key 時所綁定的電子信箱，無需額外填寫收件信箱即可正常收信。
+                </p>
+              </div>
+
+              <!-- 備用/其他引擎信箱欄位 -->
+              <div class="space-y-1.5">
+                <label for="adminOwnerEmailInput" class="block text-sm font-black text-charcoal">
+                  備用 / 其他引擎收單信箱 <span id="ownerEmailOptionalLabel" class="text-xs font-normal text-slate-500">（使用 Web3Forms 時為選填）</span>
+                </label>
+                <input
+                  id="adminOwnerEmailInput"
+                  type="email"
+                  placeholder="例如：myrestaurant@gmail.com（選填）"
+                  class="w-full px-4 py-2.5 rounded-xl border border-stone-300 bg-white text-charcoal font-num text-sm focus:outline-none focus:ring-2 focus:ring-terracotta-500"
+                />
+              </div>
+
+              <!-- EmailJS 專屬欄位 -->
+              <div id="engineFields-emailjs" class="hidden space-y-3">
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div class="space-y-1">
+                    <label for="emailjsServiceInput" class="block text-xs font-black text-charcoal">Service ID *</label>
+                    <input id="emailjsServiceInput" type="text" placeholder="service_xxxxxxx" class="w-full px-3 py-2.5 rounded-xl border border-stone-300 bg-white font-num text-xs focus:outline-none focus:ring-2 focus:ring-terracotta-500" />
+                  </div>
+                  <div class="space-y-1">
+                    <label for="emailjsTemplateInput" class="block text-xs font-black text-charcoal">Template ID *</label>
+                    <input id="emailjsTemplateInput" type="text" placeholder="template_xxxxxxx" class="w-full px-3 py-2.5 rounded-xl border border-stone-300 bg-white font-num text-xs focus:outline-none focus:ring-2 focus:ring-terracotta-500" />
+                  </div>
+                  <div class="space-y-1">
+                    <label for="emailjsPublicKeyInput" class="block text-xs font-black text-charcoal">Public Key *</label>
+                    <input id="emailjsPublicKeyInput" type="text" placeholder="user_xxxxxxxxxxxx" class="w-full px-3 py-2.5 rounded-xl border border-stone-300 bg-white font-num text-xs focus:outline-none focus:ring-2 focus:ring-terracotta-500" />
+                  </div>
+                </div>
+              </div>
+
+              <!-- FormSubmit 專屬提醒 -->
+              <div id="engineFields-formsubmit" class="hidden">
+                <div class="rounded-xl bg-amber-50 border border-amber-200 p-3 text-xs text-amber-900">
+                  <strong>🛡️ FormSubmit 備援說明：</strong>請在上方填入收單信箱，首次使用請至信箱點擊 FormSubmit 啟用連結。
+                </div>
+              </div>
+
+              <!-- Mailto 專屬提醒 -->
+              <div id="engineFields-mailto" class="hidden">
+                <div class="rounded-xl bg-stone-200/70 border border-stone-300 p-3 text-xs text-charcoal">
+                  <strong>📱 本機信箱 App 直發：</strong>送單時會自動開啟手機或電腦預設郵件軟體並帶入完整訂單明細。
+                </div>
+              </div>
+
+              <!-- 儲存與測試寄信按鈕列 -->
+              <div class="flex flex-col sm:flex-row gap-3 pt-2">
+                <button
+                  type="button"
+                  id="saveEmailConfigBtn"
+                  class="sm:w-1/2 py-3 px-4 rounded-xl bg-charcoal hover:bg-slate-900 text-white font-black text-sm shadow-sm transition-all"
+                >
+                  💾 儲存寄信設定
+                </button>
+                <button
+                  type="button"
+                  id="sendTestEmailBtn"
+                  class="sm:w-1/2 py-3 px-4 rounded-xl bg-terracotta-500 hover:bg-terracotta-600 text-white font-black text-sm shadow-md shadow-terracotta-500/20 flex items-center justify-center gap-2 transition-all"
+                >
+                  <span>🚀 發送測試訂單信</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- 即時診斷終端機畫面 (Diagnostics Log) -->
+            <div class="space-y-2">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-black text-charcoal flex items-center gap-1.5">
+                  <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                  <span>即時寄信連線與診斷終端機 (Diagnostics Log)</span>
+                </span>
+                <button type="button" id="clearDiagnosticsLogBtn" class="text-xs text-slate-500 hover:text-charcoal font-bold">
+                  清除日誌
+                </button>
+              </div>
+              <div
+                id="diagnosticsLogConsole"
+                class="bg-slate-900 text-emerald-400 font-mono text-xs p-4 rounded-2xl border border-slate-700 h-44 overflow-y-auto space-y-1.5 leading-relaxed"
+              >
+                <div class="text-emerald-400">[系統就緒] 已載入 Web3Forms Access Key (F9ac431d-****-****-****-c1d38d6d5fc1)。點擊「發送測試訂單信」即可立即驗證！</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ========== 分頁二：歷史訂單管理 ========== -->
+          <div id="adminTabPanel-orders" class="admin-tab-panel hidden space-y-5">
+            <!-- 統計與匯出 CSV 工具列 -->
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-cream p-4 rounded-2xl border border-stone-200">
+              <div class="flex items-center gap-6">
+                <div>
+                  <div class="text-xs text-slate-500 font-bold">累計歷史訂單</div>
+                  <div id="adminTotalOrdersStat" class="text-xl font-num font-black text-charcoal">0 筆</div>
+                </div>
+                <div class="h-8 w-px bg-stone-300"></div>
+                <div>
+                  <div class="text-xs text-slate-500 font-bold">累計營業額</div>
+                  <div id="adminTotalRevenueStat" class="text-xl font-num font-black text-terracotta-600">NT$ 0</div>
+                </div>
+              </div>
+
+              <div class="flex items-center gap-2">
+                <button
+                  type="button"
+                  id="exportCsvBtn"
+                  class="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs sm:text-sm flex items-center gap-1.5 shadow-xs transition-colors"
+                >
+                  <span>📥</span>
+                  <span>匯出 CSV 報表</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- 歷史訂單列表 -->
+            <div id="adminOrdersListContainer" class="space-y-3"></div>
+          </div>
+
+          <!-- ========== 分頁三：菜單庫存與店鋪設定 ========== -->
+          <div id="adminTabPanel-menu" class="admin-tab-panel hidden space-y-6">
+            <!-- 營業基本設定 -->
+            <div class="bg-cream p-4 sm:p-5 rounded-2xl border border-stone-200 space-y-4">
+              <h4 class="text-sm font-black text-charcoal">🏪 店鋪基本與外送費設定</h4>
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div class="space-y-1">
+                  <label for="adminStoreNameInput" class="block text-xs font-bold text-slate-600">餐廳名稱</label>
+                  <input id="adminStoreNameInput" type="text" class="w-full px-3.5 py-2.5 rounded-xl border border-stone-300 bg-white text-sm font-bold text-charcoal" />
+                </div>
+                <div class="space-y-1">
+                  <label for="adminDeliveryFeeInput" class="block text-xs font-bold text-slate-600">外送基本運費 (NT$)</label>
+                  <input id="adminDeliveryFeeInput" type="number" min="0" class="w-full px-3.5 py-2.5 rounded-xl border border-stone-300 bg-white text-sm font-num font-bold text-charcoal" />
+                </div>
+                <div class="space-y-1">
+                  <label for="adminFreeThresholdInput" class="block text-xs font-bold text-slate-600">外送免運門檻 (NT$)</label>
+                  <input id="adminFreeThresholdInput" type="number" min="0" class="w-full px-3.5 py-2.5 rounded-xl border border-stone-300 bg-white text-sm font-num font-bold text-charcoal" />
+                </div>
+              </div>
+              <div class="flex justify-end">
+                <button
+                  type="button"
+                  id="saveStoreSettingsBtn"
+                  class="px-5 py-2.5 rounded-xl bg-terracotta-500 hover:bg-terracotta-600 text-white font-bold text-xs sm:text-sm shadow-xs transition-colors"
+                >
+                  儲存店鋪設定
+                </button>
+              </div>
+            </div>
+
+            <!-- 14 道餐點庫存狀態切換列表 -->
+            <div class="space-y-3">
+              <div class="flex items-center justify-between">
+                <h4 class="text-sm font-black text-charcoal">📦 餐點即時庫存狀態控制（點擊切換供應中 / 已售完）</h4>
+              </div>
+              <div id="adminMenuStockList" class="grid grid-cols-1 sm:grid-cols-2 gap-2.5"></div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== 12. 全域非阻塞 Toast 通知容器 ==================== -->
+  <div id="toastContainer" class="fixed top-20 right-4 z-50 flex flex-col gap-2 pointer-events-none max-w-xs sm:max-w-sm"></div>
+
+  <!-- ==================== 核心應用程式邏輯 (Vanilla JavaScript) ==================== -->
+  <script>
+    /**
+     * ============================================================================
+     * 美味小館 2.0・智慧線上點餐系統 - 核心邏輯與 Web3Forms 預先綁定架構
+     * ============================================================================
+     */
+
+    // 預設永久綁定的寄信與店鋪設定（已預先填入老闆專屬 Web3Forms Access Key）
+    const DEFAULT_CONFIG = {
+      engine: 'web3forms',
+      web3formsKey: '678c5feb-1646-4e92-a5eb-d3ed28b96f66',
+      ownerEmail: 'et656421@gmail.com',
+      emailjsServiceId: 'service_1y6o5ua',
+      emailjsTemplateId: 'template_xbi4gnl',
+      emailjsPublicKey: '-aX-Ayj3EuOyf1Zl4'
+    };
+
+    // LocalStorage 持久化鍵名定義
+    const KEYS = {
+      EMAIL_CONFIG: "meiwei_v2_email_config",
+      STORE_CONFIG: "meiwei_v2_store_config",
+      SOLD_OUT_IDS: "meiwei_v2_sold_out_ids",
+      ORDER_HISTORY: "meiwei_v2_order_history",
+      ORDER_SEQ: "meiwei_v2_order_seq"
+    };
+
+    // 內建優惠碼規則
+    const PROMO_CODES = {
+      WELCOME50: {
+        code: "WELCOME50",
+        label: "新客優惠現折 $50",
+        minSubtotal: 100,
+        type: "fixed",
+        value: 50
+      },
+      VIP88: {
+        code: "VIP88",
+        label: "VIP 專屬全單 88 折",
+        minSubtotal: 0,
+        type: "percent",
+        value: 0.88
+      }
+    };
+
+    // 客製化選項定義
+    const SPICE_LEVELS = ["不辣", "小辣", "中辣", "大辣"];
+    const ICE_LEVELS = ["正常冰", "少冰", "微冰", "去冰", "溫熱"];
+    const SUGAR_LEVELS = ["全糖", "少糖", "半糖", "微糖", "無糖"];
+    const ADDON_OPTIONS = [
+      { id: "egg", name: "加滷蛋", price: 15 },
+      { id: "tofu", name: "加油豆腐", price: 15 },
+      { id: "noodle_rice", name: "加麵/加飯", price: 15 },
+      { id: "meatballs", name: "貢丸兩顆", price: 20 }
+    ];
+
+    // 內用桌號清單 A1 ~ B6
+    const TABLE_NUMBERS = ["A1", "A2", "A3", "A4", "A5", "A6", "B1", "B2", "B3", "B4", "B5", "B6"];
+
+    // 6 大分類
+    const CATEGORIES = ["全部", "人氣招牌", "主食飯麵", "台味小菜", "暖心湯品", "古早味飲品"];
+
+    // 14 道台灣經典美食與飲品菜單資料（附專屬美食 SVG 插畫）
+    const MENU_ITEMS = [
+      {
+        id: "braised-pork-rice",
+        name: "招牌手切滷肉飯",
+        category: "人氣招牌",
+        price: 65,
+        tags: ["人氣招牌"],
+        defaultSpice: "不辣",
+        description: "精選台灣溫體帶皮五花肉手工切丁慢燉六小時，膠質黏唇不油膩，搭配古早味醃黃蘿蔔。",
+        bg: "from-amber-100 to-orange-100",
+        svg: `<svg viewBox="0 0 120 120" class="w-20 h-20">
+          <circle cx="60" cy="60" r="50" fill="#FDE68A" opacity="0.5"/>
+          <path d="M26 60h68a34 34 0 0 1-68 0Z" fill="#D95D39"/>
+          <path d="M33 60c5-17 49-17 54 0Z" fill="#FFFFFF"/>
+          <path d="M38 55c8-9 36-9 44 0Z" fill="#78350F"/>
+          <ellipse cx="74" cy="52" rx="8" ry="5" fill="#FACC15"/>
+        </svg>`
+      },
+      {
+        id: "beef-noodle",
+        name: "紅燒半筋半肉牛肉麵",
+        category: "人氣招牌",
+        price: 190,
+        tags: ["人氣招牌", "辣味"],
+        defaultSpice: "小辣",
+        description: "澳洲牛腱心與Q彈牛筋慢熬八小時，濃郁紅燒牛骨湯頭搭配手工拉麵與秘製酸菜。",
+        bg: "from-orange-100 to-red-100",
+        svg: `<svg viewBox="0 0 120 120" class="w-20 h-20">
+          <circle cx="60" cy="60" r="50" fill="#FED7AA" opacity="0.55"/>
+          <path d="M22 58h76a38 38 0 0 1-76 0Z" fill="#1E293B"/>
+          <ellipse cx="60" cy="58" rx="34" ry="10" fill="#B91C1C"/>
+          <path d="M36 56c8-6 18 6 26 0s16 5 22-1" stroke="#FDE68A" stroke-width="4" fill="none" stroke-linecap="round"/>
+          <ellipse cx="47" cy="54" rx="10" ry="5" fill="#7C2D12"/>
+          <ellipse cx="72" cy="55" rx="9" ry="4.5" fill="#9A3412"/>
+          <circle cx="60" cy="50" r="4" fill="#16A34A"/>
+        </svg>`
+      },
+      {
+        id: "crispy-pork-chop-rice",
+        name: "酥炸黃金排骨飯",
+        category: "人氣招牌",
+        price: 145,
+        tags: ["人氣招牌"],
+        defaultSpice: "不辣",
+        description: "厚切帶骨里肌以秘製五香醬汁醃漬入味，現點現炸外酥內嫩多汁，附三樣季節家常配菜。",
+        bg: "from-yellow-100 to-amber-100",
+        svg: `<svg viewBox="0 0 120 120" class="w-20 h-20">
+          <circle cx="60" cy="60" r="50" fill="#FEF08A" opacity="0.55"/>
+          <ellipse cx="60" cy="74" rx="42" ry="13" fill="#E2E8F0"/>
+          <path d="M34 68c5-16 47-16 52 0Z" fill="#FFFFFF"/>
+          <rect x="35" y="44" width="48" height="16" rx="8" transform="rotate(-8 60 52)" fill="#D97706" stroke="#B45309" stroke-width="2"/>
+          <circle cx="72" cy="63" r="5" fill="#16A34A"/>
+        </svg>`
+      },
+      {
+        id: "garlic-pork-rice",
+        name: "蒜泥白肉飯",
+        category: "主食飯麵",
+        price: 130,
+        tags: ["經典台味"],
+        defaultSpice: "不辣",
+        description: "特選五花肉川燙冰鎮保持爽脆 Q 彈，淋上雲林蒜泥與古早味油膏，配白飯超下飯。",
+        bg: "from-rose-50 to-amber-100",
+        svg: `<svg viewBox="0 0 120 120" class="w-20 h-20">
+          <circle cx="60" cy="60" r="50" fill="#FFE4E6" opacity="0.55"/>
+          <ellipse cx="60" cy="72" rx="40" ry="14" fill="#FFFFFF" stroke="#CBD5E1" stroke-width="2"/>
+          <rect x="36" y="54" width="48" height="10" rx="5" fill="#FDA4AF"/>
+          <rect x="40" y="62" width="40" height="8" rx="4" fill="#FB7185"/>
+          <path d="M44 58h32" stroke="#78350F" stroke-width="3" stroke-linecap="round"/>
+        </svg>`
+      },
+      {
+        id: "seafood-dingbiancuo-noodle",
+        name: "鼎邊銼風味海鮮湯麵",
+        category: "主食飯麵",
+        price: 155,
+        tags: ["基隆特色"],
+        defaultSpice: "不辣",
+        description: "滑嫩 Q 彈米漿鼎邊銼搭配鮮蝦、花枝、蛤蜊與金針香菇，大骨柴魚湯頭鮮甜回甘。",
+        bg: "from-sky-50 to-amber-100",
+        svg: `<svg viewBox="0 0 120 120" class="w-20 h-20">
+          <circle cx="60" cy="60" r="50" fill="#E0F2FE" opacity="0.55"/>
+          <path d="M24 58h72a36 36 0 0 1-72 0Z" fill="#334155"/>
+          <ellipse cx="60" cy="58" rx="32" ry="9" fill="#FEF3C7"/>
+          <path d="M42 56c8-8 18 0 12 6" stroke="#F97316" stroke-width="5" stroke-linecap="round" fill="none"/>
+          <circle cx="69" cy="55" r="6" fill="#E2E8F0" stroke="#94A3B8" stroke-width="1.5"/>
+          <circle cx="58" cy="51" r="2.5" fill="#16A34A"/>
+        </svg>`
+      },
+      {
+        id: "three-cup-chicken-rice",
+        name: "塔香三杯雞腿飯",
+        category: "人氣招牌",
+        price: 165,
+        tags: ["人氣招牌", "辣味"],
+        defaultSpice: "小辣",
+        description: "黑麻油爆香老薑片與整顆蒜頭，去骨鮮嫩雞腿肉收汁入味伴隨九層塔濃郁香氣。",
+        bg: "from-rose-100 to-orange-100",
+        svg: `<svg viewBox="0 0 120 120" class="w-20 h-20">
+          <circle cx="60" cy="60" r="50" fill="#FED7AA" opacity="0.5"/>
+          <path d="M26 62h68v12a22 22 0 0 1-22 22H48a22 22 0 0 1-22-22V62Z" fill="#1E293B"/>
+          <rect x="22" y="57" width="76" height="7" rx="3.5" fill="#475569"/>
+          <circle cx="48" cy="52" r="10" fill="#9A3412"/><circle cx="68" cy="51" r="11" fill="#7C2D12"/>
+          <path d="M42 42c-6-6-12-2-8 4s10 2 8-4ZM75 40c6-6 12-2 8 4s-10 2-8-4Z" fill="#15803D"/>
+        </svg>`
+      },
+      {
+        id: "blanched-greens",
+        name: "燙青菜",
+        category: "台味小菜",
+        price: 45,
+        tags: ["素食可"],
+        defaultSpice: "不辣",
+        description: "每日產地直送新鮮時蔬大火川燙保留脆綠，可依需求客製蒜蓉醬油或全素清燙。",
+        bg: "from-emerald-50 to-lime-100",
+        svg: `<svg viewBox="0 0 120 120" class="w-20 h-20">
+          <circle cx="60" cy="60" r="50" fill="#DCFCE7" opacity="0.65"/>
+          <ellipse cx="60" cy="74" rx="40" ry="12" fill="#FFFFFF" stroke="#CBD5E1" stroke-width="2"/>
+          <path d="M36 66c4-16 20-20 26-10 8-12 24-6 24 10Z" fill="#16A34A"/>
+          <path d="M42 64c6-10 16-10 20-2" stroke="#4ADE80" stroke-width="3" stroke-linecap="round" fill="none"/>
+        </svg>`
+      },
+      {
+        id: "braised-egg-tofu-platter",
+        name: "滷蛋油豆腐拼盤",
+        category: "台味小菜",
+        price: 50,
+        tags: ["素食可"],
+        defaultSpice: "不辣",
+        description: "老滷汁慢火滷透的 Q 彈滷蛋與吸飽湯汁的三角油豆腐，撒上蔥花與香油提香。",
+        bg: "from-amber-100 to-stone-200",
+        svg: `<svg viewBox="0 0 120 120" class="w-20 h-20">
+          <circle cx="60" cy="60" r="50" fill="#FEF3C7" opacity="0.6"/>
+          <ellipse cx="60" cy="75" rx="40" ry="12" fill="#F8FAFC" stroke="#CBD5E1" stroke-width="2"/>
+          <polygon points="36,68 54,44 68,68" fill="#D97706" stroke="#92400E" stroke-width="2"/>
+          <ellipse cx="75" cy="59" rx="11" ry="14" fill="#78350F"/>
+          <circle cx="60" cy="48" r="2.5" fill="#16A34A"/>
+        </svg>`
+      },
+      {
+        id: "spicy-wontons",
+        name: "招牌紅油抄手",
+        category: "台味小菜",
+        price: 85,
+        tags: ["人氣招牌", "辣味"],
+        defaultSpice: "小辣",
+        description: "皮薄餡鮮的手工鮮肉大餛飩，拌入自煉花椒紅油、烏醋與花生碎，香麻開胃。",
+        bg: "from-red-100 to-orange-100",
+        svg: `<svg viewBox="0 0 120 120" class="w-20 h-20">
+          <circle cx="60" cy="60" r="50" fill="#FEE2E2" opacity="0.6"/>
+          <path d="M28 62h64a32 32 0 0 1-64 0Z" fill="#1E293B"/>
+          <ellipse cx="60" cy="62" rx="28" ry="8" fill="#DC2626"/>
+          <circle cx="48" cy="58" r="9" fill="#FEF3C7" stroke="#F59E0B" stroke-width="2"/>
+          <circle cx="68" cy="57" r="9" fill="#FEF3C7" stroke="#F59E0B" stroke-width="2"/>
+          <circle cx="58" cy="52" r="8" fill="#FFFBEB" stroke="#F59E0B" stroke-width="2"/>
+        </svg>`
+      },
+      {
+        id: "hot-and-sour-soup",
+        name: "酸辣湯",
+        category: "暖心湯品",
+        price: 55,
+        tags: ["辣味"],
+        defaultSpice: "小辣",
+        description: "木耳、筍絲、豆腐、豬血與蛋花豐富配料，白胡椒辛香搭配鎮江烏醋，酸香滑順。",
+        bg: "from-amber-100 to-red-50",
+        svg: `<svg viewBox="0 0 120 120" class="w-20 h-20">
+          <circle cx="60" cy="60" r="50" fill="#FED7AA" opacity="0.5"/>
+          <path d="M26 58h68a34 34 0 0 1-68 0Z" fill="#D95D39"/>
+          <ellipse cx="60" cy="58" rx="30" ry="8" fill="#92400E"/>
+          <path d="M44 57c8-4 22 4 30-2" stroke="#FDE047" stroke-width="3" stroke-linecap="round" fill="none"/>
+          <circle cx="54" cy="55" r="3" fill="#1E293B"/>
+          <circle cx="66" cy="54" r="2.5" fill="#16A34A"/>
+        </svg>`
+      },
+      {
+        id: "winter-melon-lemon",
+        name: "古早味冬瓜檸檬",
+        category: "古早味飲品",
+        price: 50,
+        tags: ["素食可"],
+        isDrink: true,
+        description: "古法柴燒冬瓜磚熬煮清甜冬瓜露，佐以屏東九如新鮮檸檬原汁，酸甜消暑解膩。",
+        bg: "from-amber-50 to-lime-100",
+        svg: `<svg viewBox="0 0 120 120" class="w-20 h-20">
+          <circle cx="60" cy="60" r="50" fill="#FEF9C3" opacity="0.65"/>
+          <path d="M64 20l6 22" stroke="#D97706" stroke-width="5" stroke-linecap="round"/>
+          <path d="M40 40h40l-6 52H46l-6-52Z" fill="#F59E0B" stroke="#B45309" stroke-width="2"/>
+          <rect x="37" y="36" width="46" height="6" rx="3" fill="#FFFFFF"/>
+          <circle cx="59" cy="62" r="9" fill="#BEF264" stroke="#65A30D" stroke-width="2"/>
+        </svg>`
+      },
+      {
+        id: "pearl-fresh-milk-tea",
+        name: "珍珠鮮奶茶",
+        category: "古早味飲品",
+        price: 65,
+        tags: ["人氣招牌"],
+        isDrink: true,
+        description: "手炒黑糖蜜漬波霸珍珠融入濃厚錫蘭紅茶與牧場鮮乳，茶香與乳香完美交融。",
+        bg: "from-amber-100 to-stone-200",
+        svg: `<svg viewBox="0 0 120 120" class="w-20 h-20">
+          <circle cx="60" cy="60" r="50" fill="#FED7AA" opacity="0.45"/>
+          <path d="M66 20l8 22" stroke="#1E293B" stroke-width="6" stroke-linecap="round"/>
+          <path d="M40 40h40l-6 52H46l-6-52Z" fill="#D6A272" stroke="#78350F" stroke-width="2"/>
+          <rect x="37" y="36" width="46" height="6" rx="3" fill="#F8FAFC"/>
+          <circle cx="51" cy="83" r="4" fill="#1E293B"/><circle cx="60" cy="85" r="4" fill="#1E293B"/><circle cx="69" cy="83" r="4" fill="#1E293B"/>
+        </svg>`
+      },
+      {
+        id: "iced-plum-juice",
+        name: "冰鎮烏梅汁",
+        category: "古早味飲品",
+        price: 55,
+        tags: ["素食可"],
+        isDrink: true,
+        description: "烏梅、山楂、洛神花與甘草文火慢熬，生津止渴、微酸回甘，搭配重口味料理絕配。",
+        bg: "from-rose-100 to-stone-200",
+        svg: `<svg viewBox="0 0 120 120" class="w-20 h-20">
+          <circle cx="60" cy="60" r="50" fill="#FFE4E6" opacity="0.55"/>
+          <path d="M64 20l6 22" stroke="#881337" stroke-width="5" stroke-linecap="round"/>
+          <path d="M40 40h40l-6 52H46l-6-52Z" fill="#881337" stroke="#4C0519" stroke-width="2"/>
+          <rect x="37" y="36" width="46" height="6" rx="3" fill="#FFFFFF"/>
+          <rect x="50" y="54" width="12" height="12" rx="2" fill="#FECDD3" opacity="0.6"/>
+        </svg>`
+      },
+      {
+        id: "alpine-cold-brew-tea",
+        name: "台灣高山冷泡茶",
+        category: "古早味飲品",
+        price: 45,
+        tags: ["素食可"],
+        isDrink: true,
+        description: "嚴選南投高山烏龍茶葉低溫冷萃十二小時，茶湯清澈金黃、花香淡雅零苦澀。",
+        bg: "from-emerald-50 to-teal-100",
+        svg: `<svg viewBox="0 0 120 120" class="w-20 h-20">
+          <circle cx="60" cy="60" r="50" fill="#D1FAE5" opacity="0.6"/>
+          <rect x="44" y="34" width="32" height="58" rx="10" fill="#A7F3D0" stroke="#059669" stroke-width="2"/>
+          <rect x="49" y="25" width="22" height="9" rx="3" fill="#065F46"/>
+          <path d="M54 62c6-8 14-4 12 4s-12 4-12-4Z" fill="#047857"/>
+        </svg>`
+      }
+    ];
+
+    // ==================== 全域應用程式狀態 ====================
+    const state = {
+      selectedCategory: "全部",
+      searchQuery: "",
+      diningType: "內用", // "內用" | "外帶自取" | "店家外送"
+      selectedTable: "A1",
+      cart: [],
+      appliedPromoCode: null,
+
+      // 客製化彈窗暫存狀態
+      customModalState: {
+        item: null,
+        spice: "不辣",
+        ice: "少冰",
+        sugar: "半糖",
+        addons: [],
+        itemNote: "",
+        qty: 1
+      },
+
+      // 寄信設定（直接繼承已預先設定的 DEFAULT_CONFIG）
+      emailConfig: { ...DEFAULT_CONFIG },
+
+      // 店鋪與外送設定（滿 NT$300 免運，否則 NT$40）
+      storeConfig: {
+        storeName: "美味小館",
+        deliveryFee: 40,
+        freeDeliveryThreshold: 300
+      },
+      soldOutIds: [],
+      orderHistory: [],
+      lastReceiptOrder: null
+    };
+
+    // ==================== 持久化讀取與遷移合併 ====================
+    function loadPersistedData() {
+      try {
+        const savedEmailRaw = localStorage.getItem(KEYS.EMAIL_CONFIG);
+        if (savedEmailRaw) {
+          const parsed = JSON.parse(savedEmailRaw);
+          // 合并儲存設定，並確保若舊儲存中 web3formsKey 為空，自動填入預先設定的專屬金鑰
+          state.emailConfig = {
+            ...DEFAULT_CONFIG,
+            ...parsed,
+            web3formsKey: (parsed.web3formsKey && parsed.web3formsKey.trim())
+              ? parsed.web3formsKey.trim()
+              : DEFAULT_CONFIG.web3formsKey
+          };
+        } else {
+          state.emailConfig = { ...DEFAULT_CONFIG };
+          saveEmailConfigToStorage();
+        }
+
+        const savedStore = localStorage.getItem(KEYS.STORE_CONFIG);
+        if (savedStore) {
+          state.storeConfig = { ...state.storeConfig, ...JSON.parse(savedStore) };
+        }
+        const savedSoldOut = localStorage.getItem(KEYS.SOLD_OUT_IDS);
+        if (savedSoldOut) {
+          state.soldOutIds = JSON.parse(savedSoldOut) || [];
+        }
+        const savedOrders = localStorage.getItem(KEYS.ORDER_HISTORY);
+        if (savedOrders) {
+          state.orderHistory = JSON.parse(savedOrders) || [];
+        }
+      } catch (e) {
+        state.emailConfig = { ...DEFAULT_CONFIG };
+      }
+    }
+
+    function saveEmailConfigToStorage() {
+      try {
+        localStorage.setItem(KEYS.EMAIL_CONFIG, JSON.stringify(state.emailConfig));
+      } catch (e) {}
+    }
+
+    function saveStoreConfigToStorage() {
+      try {
+        localStorage.setItem(KEYS.STORE_CONFIG, JSON.stringify(state.storeConfig));
+      } catch (e) {}
+    }
+
+    function saveSoldOutToStorage() {
+      try {
+        localStorage.setItem(KEYS.SOLD_OUT_IDS, JSON.stringify(state.soldOutIds));
+      } catch (e) {}
+    }
+
+    function saveOrderHistoryToStorage() {
+      try {
+        localStorage.setItem(KEYS.ORDER_HISTORY, JSON.stringify(state.orderHistory));
+      } catch (e) {}
+    }
+
+    // ==================== 寄信引擎就緒狀態檢查 ====================
+    function isValidEmail(email) {
+      return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email || "").trim());
+    }
+
+    function getEngineDisplayName(engine) {
+      const map = {
+        web3forms: "Web3Forms API",
+        emailjs: "EmailJS API",
+        formsubmit: "FormSubmit.co",
+        mailto: "本機信箱 App (mailto:)"
+      };
+      return map[engine] || engine;
+    }
+
+    function checkEmailConfigReady() {
+      const cfg = state.emailConfig;
+
+      // Web3Forms 只要有非空的 Access Key 即視為 100% 就緒（無需 ownerEmail）
+      if (cfg.engine === "web3forms") {
+        if (cfg.web3formsKey && cfg.web3formsKey.trim().length > 0) {
+          return {
+            ready: true,
+            reason: "寄信引擎已就緒・Web3Forms 自動收單已啟用"
+          };
+        }
+        return {
+          ready: false,
+          reason: "尚未填寫 Web3Forms Access Key"
+        };
+      }
+
+      const hasValidEmail = isValidEmail(cfg.ownerEmail);
+
+      if (cfg.engine === "emailjs") {
+        if (!hasValidEmail || !cfg.emailjsServiceId.trim() || !cfg.emailjsTemplateId.trim() || !cfg.emailjsPublicKey.trim()) {
+          return {
+            ready: false,
+            reason: "尚未完整填寫 EmailJS 參數"
+          };
+        }
+        return { ready: true, reason: `已連線 EmailJS API（${cfg.ownerEmail}）` };
+      }
+
+      if (cfg.engine === "formsubmit") {
+        if (!hasValidEmail) {
+          return { ready: false, reason: "尚未填寫 FormSubmit 收單信箱" };
+        }
+        return { ready: true, reason: `已啟用 FormSubmit 寄信（${cfg.ownerEmail}）` };
+      }
+
+      if (cfg.engine === "mailto") {
+        if (!hasValidEmail) {
+          return { ready: false, reason: "尚未填寫本機信箱 App 收件地址" };
+        }
+        return { ready: true, reason: `已啟用本機信箱 App 直發（${cfg.ownerEmail}）` };
+      }
+
+      return { ready: false, reason: "尚未完成寄信引擎設定" };
+    }
+
+    function updateTopStatusAndStoreUI() {
+      document.getElementById("headerStoreName").textContent = state.storeConfig.storeName;
+      document.getElementById("headerDeliveryRuleText").textContent =
+        `外送滿 NT$${state.storeConfig.freeDeliveryThreshold} 免運費`;
+      document.getElementById("headerOrderCountBadge").textContent = state.orderHistory.length;
+      document.getElementById("tabOrdersCount").textContent = state.orderHistory.length;
+
+      const banner = document.getElementById("topEmailAlertBanner");
+      const bannerMsg = document.getElementById("topBannerMessage");
+      const statusDot = document.getElementById("adminStatusDot");
+      const check = checkEmailConfigReady();
+
+      if (check.ready) {
+        banner.className = "bg-emerald-700 text-white px-4 py-2 text-xs sm:text-sm border-b border-emerald-800 transition-all";
+        bannerMsg.textContent = check.reason;
+        statusDot.className = "w-2.5 h-2.5 rounded-full bg-emerald-400";
+      } else {
+        banner.className = "bg-amber-500 text-white px-4 py-2.5 text-xs sm:text-sm border-b border-amber-600/30 transition-all";
+        bannerMsg.textContent = `⚠️ ${check.reason}`;
+        statusDot.className = "w-2.5 h-2.5 rounded-full bg-amber-300 animate-ping";
+      }
+    }
+
+    // ==================== 金額與優惠碼計算工具 ====================
+    function formatCurrency(amount) {
+      return `NT$ ${Math.round(Number(amount)).toLocaleString("zh-TW")}`;
+    }
+
+    function calculateTotals() {
+      const totalQty = state.cart.reduce((sum, item) => sum + item.qty, 0);
+      const subtotal = state.cart.reduce((sum, item) => sum + item.unitPrice * item.qty, 0);
+
+      let discountAmount = 0;
+      const activePromo = state.appliedPromoCode;
+      if (activePromo && subtotal > 0 && subtotal >= activePromo.minSubtotal) {
+        if (activePromo.type === "fixed") {
+          discountAmount = Math.min(subtotal, activePromo.value);
+        } else if (activePromo.type === "percent") {
+          discountAmount = Math.round(subtotal * (1 - activePromo.value));
+        }
+      }
+
+      const afterDiscountSubtotal = Math.max(0, subtotal - discountAmount);
+      const threshold = Number(state.storeConfig.freeDeliveryThreshold) || 300;
+      const baseFee = Number(state.storeConfig.deliveryFee) || 40;
+
+      let deliveryFee = 0;
+      if (state.diningType === "店家外送" && subtotal > 0 && subtotal < threshold) {
+        deliveryFee = baseFee;
+      }
+
+      const grandTotal = afterDiscountSubtotal + deliveryFee;
+      const amountNeededForFreeDelivery = Math.max(0, threshold - subtotal);
+      const freeDeliveryProgressPct = threshold > 0 ? Math.min(100, Math.round((subtotal / threshold) * 100)) : 100;
+
+      return {
+        totalQty,
+        subtotal,
+        discountAmount,
+        deliveryFee,
+        grandTotal,
+        threshold,
+        baseFee,
+        amountNeededForFreeDelivery,
+        freeDeliveryProgressPct
+      };
+    }
+
+    function showToast(message, type = "success") {
+      const container = document.getElementById("toastContainer");
+      const toast = document.createElement("div");
+
+      const styles = {
+        success: "bg-charcoal text-white border-slate-700",
+        warning: "bg-amber-600 text-white border-amber-500",
+        error: "bg-red-600 text-white border-red-500"
+      };
+      const icons = { success: "✅", warning: "⚠️", error: "❌" };
+
+      toast.className = `pointer-events-auto flex items-center gap-2.5 px-4 py-3 rounded-2xl border shadow-xl text-xs sm:text-sm font-bold transition-all duration-300 ${styles[type] || styles.success}`;
+      toast.innerHTML = `<span>${icons[type] || "✅"}</span><span>${message}</span>`;
+      container.appendChild(toast);
+
+      setTimeout(() => {
+        toast.classList.add("opacity-0", "-translate-y-2");
+        setTimeout(() => toast.remove(), 300);
+      }, 2800);
+    }
+
+    // ==================== 菜單與分類渲染 ====================
+    function renderCategoryTabs() {
+      const container = document.getElementById("categoryTabs");
+      container.innerHTML = CATEGORIES.map((cat) => {
+        const isActive = state.selectedCategory === cat;
+        const count = cat === "全部"
+          ? MENU_ITEMS.length
+          : MENU_ITEMS.filter((item) => item.category === cat).length;
+
+        return `
+          <button
+            type="button"
+            data-category="${cat}"
+            class="category-tab shrink-0 inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all ${
+              isActive
+                ? "bg-terracotta-500 text-white shadow-md shadow-terracotta-500/20"
+                : "bg-cream text-slate-600 hover:bg-stone-200/70 hover:text-charcoal border border-stone-200/70"
+            }"
+          >
+            <span>${cat}</span>
+            <span class="font-num text-xs px-1.5 py-0.5 rounded-full ${
+              isActive ? "bg-white/20 text-white" : "bg-white text-slate-600"
+            }">${count}</span>
+          </button>
+        `;
+      }).join("");
+
+      container.querySelectorAll(".category-tab").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          state.selectedCategory = btn.dataset.category;
+          renderCategoryTabs();
+          renderMenu();
+        });
+      });
+    }
+
+    function renderMenu() {
+      const grid = document.getElementById("menuGrid");
+      const emptyState = document.getElementById("emptySearchState");
+      const titleEl = document.getElementById("currentCategoryTitle");
+      const countBadge = document.getElementById("menuCountBadge");
+
+      const kw = state.searchQuery.trim().toLowerCase();
+      const filtered = MENU_ITEMS.filter((item) => {
+        const matchCat = state.selectedCategory === "全部" || item.category === state.selectedCategory;
+        const matchKw =
+          !kw ||
+          item.name.toLowerCase().includes(kw) ||
+          item.description.toLowerCase().includes(kw) ||
+          item.category.toLowerCase().includes(kw) ||
+          item.tags.some((t) => t.toLowerCase().includes(kw));
+        return matchCat && matchKw;
+      });
+
+      titleEl.textContent = state.selectedCategory === "全部" ? "全部經典餐點" : state.selectedCategory;
+      countBadge.textContent = `共 ${filtered.length} 道餐點`;
+
+      if (filtered.length === 0) {
+        grid.innerHTML = "";
+        emptyState.classList.remove("hidden");
+        return;
+      }
+
+      emptyState.classList.add("hidden");
+
+      grid.innerHTML = filtered
+        .map((item) => {
+          const isSoldOut = state.soldOutIds.includes(item.id);
+          const inCartTotalQty = state.cart
+            .filter((c) => c.id === item.id)
+            .reduce((sum, c) => sum + c.qty, 0);
+
+          const tagsHTML = item.tags
+            .map((tag) => {
+              let tagStyle = "bg-terracotta-50 text-terracotta-700 border-terracotta-200";
+              if (tag.includes("辣")) tagStyle = "bg-red-50 text-red-700 border-red-200";
+              if (tag.includes("素")) tagStyle = "bg-emerald-50 text-emerald-700 border-emerald-200";
+              return `<span class="text-[10px] font-bold px-2 py-0.5 rounded-md border ${tagStyle}">${tag}</span>`;
+            })
+            .join("");
+
+          return `
+            <article class="group bg-white rounded-2xl border border-stone-200/90 shadow-xs hover:shadow-md transition-all flex flex-col justify-between overflow-hidden ${
+              isSoldOut ? "opacity-70 grayscale-[0.4]" : "hover:border-terracotta-300"
+            }">
+              <div class="p-4 sm:p-5 flex gap-4">
+                <div class="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl bg-gradient-to-br ${item.bg} flex items-center justify-center shrink-0 relative overflow-hidden ${
+                  isSoldOut ? "" : "group-hover:scale-105 transition-transform duration-300"
+                }">
+                  ${item.svg}
+                  ${
+                    isSoldOut
+                      ? `<div class="absolute inset-0 bg-charcoal/70 backdrop-blur-[1px] flex items-center justify-center">
+                          <span class="px-2.5 py-1 rounded-lg bg-red-600 text-white text-xs font-black tracking-wider -rotate-6 shadow-md">已售完</span>
+                         </div>`
+                      : inCartTotalQty > 0
+                      ? `<span class="absolute top-1.5 right-1.5 min-w-[22px] h-[22px] px-1.5 rounded-full bg-terracotta-500 text-white font-num text-xs font-black flex items-center justify-center shadow-sm">
+                          ${inCartTotalQty}
+                         </span>`
+                      : ""
+                  }
+                </div>
+
+                <div class="flex-1 min-w-0 flex flex-col justify-between">
+                  <div>
+                    <div class="flex flex-wrap items-center gap-1 mb-1.5">
+                      <span class="text-[10px] font-bold text-slate-500 bg-stone-100 px-2 py-0.5 rounded-md">${item.category}</span>
+                      ${tagsHTML}
+                    </div>
+                    <h4 class="text-base sm:text-lg font-black text-charcoal leading-snug">${item.name}</h4>
+                    <p class="text-xs text-slate-500 mt-1 line-clamp-2 leading-relaxed">${item.description}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div class="px-4 sm:px-5 py-3 bg-cream/80 border-t border-stone-100 flex items-center justify-between gap-2">
+                <div class="font-num font-black text-lg sm:text-xl text-charcoal">
+                  <span class="text-xs font-bold text-terracotta-600 mr-0.5">NT$</span>${item.price}
+                </div>
+
+                ${
+                  isSoldOut
+                    ? `<button type="button" disabled class="px-4 py-2.5 rounded-xl bg-stone-200 text-slate-500 text-xs sm:text-sm font-bold cursor-not-allowed">
+                        今日已售完
+                       </button>`
+                    : `<button
+                        type="button"
+                        data-open-custom-id="${item.id}"
+                        class="open-custom-modal-btn inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-terracotta-500 hover:bg-terracotta-600 active:scale-95 text-white text-xs sm:text-sm font-bold shadow-xs transition-all"
+                      >
+                        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                          <path d="M12 5v14M5 12h14" />
+                        </svg>
+                        <span>選擇規格 / 加入</span>
+                      </button>`
+                }
+              </div>
+            </article>
+          `;
+        })
+        .join("");
+
+      grid.querySelectorAll(".open-custom-modal-btn").forEach((btn) => {
+        btn.addEventListener("click", () => openCustomModal(btn.dataset.openCustomId));
+      });
+    }
+
+    // ==================== 餐點客製化規格彈窗邏輯 ====================
+    function openCustomModal(itemId) {
+      const item = MENU_ITEMS.find((m) => m.id === itemId);
+      if (!item || state.soldOutIds.includes(item.id)) return;
+
+      state.customModalState = {
+        item,
+        spice: item.defaultSpice || "不辣",
+        ice: "少冰",
+        sugar: "半糖",
+        addons: [],
+        itemNote: "",
+        qty: 1
+      };
+
+      document.getElementById("customModalSvgBox").innerHTML = item.svg;
+      document.getElementById("customModalCategory").textContent = item.category;
+      document.getElementById("customModalTitle").textContent = item.name;
+      document.getElementById("customModalBasePrice").textContent = `單價 ${formatCurrency(item.price)}`;
+      document.getElementById("customItemNoteInput").value = "";
+
+      const isDrink = Boolean(item.isDrink);
+      document.getElementById("customSpiceSection").classList.toggle("hidden", isDrink);
+      document.getElementById("customAddonsSection").classList.toggle("hidden", isDrink);
+      document.getElementById("customDrinkSection").classList.toggle("hidden", !isDrink);
+
+      renderCustomModalOptions();
+      document.getElementById("customModal").classList.remove("hidden");
+    }
+
+    function closeCustomModal() {
+      document.getElementById("customModal").classList.add("hidden");
+    }
+
+    function renderCustomModalOptions() {
+      const cms = state.customModalState;
+      if (!cms.item) return;
+
+      document.getElementById("customSpiceOptions").innerHTML = SPICE_LEVELS.map((sp) => {
+        const active = cms.spice === sp;
+        return `
+          <button type="button" data-spice="${sp}" class="custom-spice-btn py-2.5 px-2 rounded-xl text-xs font-bold border transition-all ${
+            active
+              ? "bg-terracotta-500 text-white border-terracotta-500 shadow-xs"
+              : "bg-cream text-charcoal border-stone-200 hover:border-terracotta-300"
+          }">${sp}</button>
+        `;
+      }).join("");
+
+      document.getElementById("customIceOptions").innerHTML = ICE_LEVELS.map((ic) => {
+        const active = cms.ice === ic;
+        return `
+          <button type="button" data-ice="${ic}" class="custom-ice-btn py-2.5 px-1 rounded-xl text-xs font-bold border transition-all ${
+            active
+              ? "bg-terracotta-500 text-white border-terracotta-500 shadow-xs"
+              : "bg-cream text-charcoal border-stone-200 hover:border-terracotta-300"
+          }">${ic}</button>
+        `;
+      }).join("");
+
+      document.getElementById("customSugarOptions").innerHTML = SUGAR_LEVELS.map((sg) => {
+        const active = cms.sugar === sg;
+        return `
+          <button type="button" data-sugar="${sg}" class="custom-sugar-btn py-2.5 px-1 rounded-xl text-xs font-bold border transition-all ${
+            active
+              ? "bg-terracotta-500 text-white border-terracotta-500 shadow-xs"
+              : "bg-cream text-charcoal border-stone-200 hover:border-terracotta-300"
+          }">${sg}</button>
+        `;
+      }).join("");
+
+      document.getElementById("customAddonsOptions").innerHTML = ADDON_OPTIONS.map((ad) => {
+        const checked = cms.addons.includes(ad.id);
+        return `
+          <button type="button" data-addon="${ad.id}" class="custom-addon-btn p-3 rounded-xl border text-left flex items-center justify-between text-xs font-bold transition-all ${
+            checked
+              ? "bg-terracotta-50 border-terracotta-500 text-terracotta-800"
+              : "bg-cream border-stone-200 text-charcoal hover:border-terracotta-300"
+          }">
+            <span>${checked ? "☑" : "☐"} ${ad.name}</span>
+            <span class="font-num text-terracotta-600">+NT$${ad.price}</span>
+          </button>
+        `;
+      }).join("");
+
+      document.querySelectorAll(".custom-spice-btn").forEach((b) =>
+        b.addEventListener("click", () => {
+          state.customModalState.spice = b.dataset.spice;
+          renderCustomModalOptions();
+        })
+      );
+      document.querySelectorAll(".custom-ice-btn").forEach((b) =>
+        b.addEventListener("click", () => {
+          state.customModalState.ice = b.dataset.ice;
+          renderCustomModalOptions();
+        })
+      );
+      document.querySelectorAll(".custom-sugar-btn").forEach((b) =>
+        b.addEventListener("click", () => {
+          state.customModalState.sugar = b.dataset.sugar;
+          renderCustomModalOptions();
+        })
+      );
+      document.querySelectorAll(".custom-addon-btn").forEach((b) =>
+        b.addEventListener("click", () => {
+          const id = b.dataset.addon;
+          const idx = state.customModalState.addons.indexOf(id);
+          if (idx === -1) state.customModalState.addons.push(id);
+          else state.customModalState.addons.splice(idx, 1);
+          renderCustomModalOptions();
+        })
+      );
+
+      document.getElementById("customQtyDisplay").textContent = cms.qty;
+      const addonsTotal = cms.item.isDrink
+        ? 0
+        : cms.addons.reduce((sum, adId) => {
+            const found = ADDON_OPTIONS.find((a) => a.id === adId);
+            return sum + (found ? found.price : 0);
+          }, 0);
+      const unitPrice = cms.item.price + addonsTotal;
+      document.getElementById("customCalculatedTotal").textContent = formatCurrency(unitPrice * cms.qty);
+    }
+
+    function confirmAddCustomizedItem() {
+      const cms = state.customModalState;
+      const item = cms.item;
+      if (!item) return;
+
+      const noteVal = document.getElementById("customItemNoteInput").value.trim();
+      const selectedAddons = item.isDrink
+        ? []
+        : [...cms.addons]
+            .sort()
+            .map((id) => ADDON_OPTIONS.find((a) => a.id === id))
+            .filter(Boolean);
+
+      const addonsExtra = selectedAddons.reduce((s, a) => s + a.price, 0);
+      const unitPrice = item.price + addonsExtra;
+
+      const specParts = [];
+      if (item.isDrink) {
+        specParts.push(cms.ice, cms.sugar);
+      } else {
+        specParts.push(cms.spice);
+        if (selectedAddons.length > 0) {
+          specParts.push(selectedAddons.map((a) => `${a.name}(+$${a.price})`).join("、"));
+        }
+      }
+      if (noteVal) {
+        specParts.push(`備註:${noteVal}`);
+      }
+
+      const summaryLabel = specParts.join(" / ");
+      const cartKey = `${item.id}::${summaryLabel}`;
+
+      const existing = state.cart.find((c) => c.cartKey === cartKey);
+      if (existing) {
+        existing.qty += cms.qty;
+      } else {
+        state.cart.push({
+          cartKey,
+          id: item.id,
+          name: item.name,
+          basePrice: item.price,
+          unitPrice,
+          qty: cms.qty,
+          summaryLabel
+        });
+      }
+
+      closeCustomModal();
+      renderMenu();
+      renderCart();
+      showToast(`已加入「${item.name}」× ${cms.qty}`);
+    }
+
+    // ==================== 購物車渲染（桌面側邊欄 + 手機抽屜共用） ====================
+    function syncDiningTypeUI(newType) {
+      state.diningType = newType;
+      document.querySelectorAll(".hero-dining-btn").forEach((btn) => {
+        const active = btn.dataset.heroDining === newType;
+        btn.className = `hero-dining-btn px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all ${
+          active ? "bg-terracotta-500 text-white shadow-sm" : "text-slate-200 hover:bg-white/10"
+        }`;
+      });
+      document.querySelectorAll('input[name="checkoutDiningType"]').forEach((r) => {
+        r.checked = r.value === newType;
+      });
+      updateCheckoutDynamicSections();
+      renderCart();
+    }
+
+    function buildCartHTML(isMobileDrawer = false) {
+      const totals = calculateTotals();
+
+      const headerHTML = `
+        <div class="px-5 py-4 bg-charcoal text-white flex items-center justify-between shrink-0">
+          <div class="flex items-center gap-2.5">
+            <span class="text-lg">🛒</span>
+            <div>
+              <h3 class="font-black text-base">我的點餐購物車</h3>
+              <p class="text-[11px] text-slate-300">共 ${totals.totalQty} 份餐點</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            ${
+              state.cart.length > 0
+                ? `<button type="button" class="cart-clear-btn text-xs text-slate-300 hover:text-red-400 px-2.5 py-1.5 rounded-lg hover:bg-slate-800">清空</button>`
+                : ""
+            }
+            ${
+              isMobileDrawer
+                ? `<button type="button" class="cart-close-drawer-btn p-2 rounded-xl bg-slate-800 text-slate-300 hover:text-white">
+                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6 6 18M6 6l12 12"/></svg>
+                   </button>`
+                : ""
+            }
+          </div>
+        </div>
+      `;
+
+      const modeSwitchHTML = `
+        <div class="px-4 py-2.5 bg-cream border-b border-stone-200 flex items-center justify-between gap-2 shrink-0">
+          <span class="text-xs font-bold text-slate-600 shrink-0">模式：</span>
+          <div class="grid grid-cols-3 gap-1 bg-stone-200/80 p-1 rounded-xl flex-1">
+            ${["內用", "外帶自取", "店家外送"]
+              .map(
+                (m) => `
+                <button type="button" data-cart-mode="${m}" class="cart-mode-btn py-1.5 px-1.5 rounded-lg text-xs font-bold transition-all ${
+                  state.diningType === m ? "bg-white text-terracotta-600 shadow-2xs" : "text-slate-600 hover:text-charcoal"
+                }">${m === "外帶自取" ? "外帶" : m === "店家外送" ? "外送" : "內用"}</button>
+              `
+              )
+              .join("")}
+          </div>
+        </div>
+      `;
+
+      let freeDeliveryBarHTML = "";
+      if (state.diningType === "店家外送") {
+        const isFree = totals.amountNeededForFreeDelivery === 0 && totals.subtotal > 0;
+        freeDeliveryBarHTML = `
+          <div class="px-4 py-2.5 ${isFree ? "bg-emerald-50 border-emerald-200" : "bg-terracotta-50 border-terracotta-200"} border-b space-y-1.5 shrink-0">
+            <div class="flex items-center justify-between text-xs font-bold">
+              <span class="${isFree ? "text-emerald-800" : "text-terracotta-800"}">
+                ${
+                  isFree
+                    ? `🎉 已享滿 ${formatCurrency(totals.threshold)} 免運優惠！`
+                    : `🛵 再差 ${formatCurrency(totals.amountNeededForFreeDelivery)} 享滿額免運`
+                }
+              </span>
+              <span class="font-num text-[11px] ${isFree ? "text-emerald-700" : "text-terracotta-600"}">
+                ${totals.freeDeliveryProgressPct}%
+              </span>
+            </div>
+            <div class="w-full h-2 rounded-full bg-white overflow-hidden border border-stone-200/80">
+              <div
+                class="h-full rounded-full transition-all duration-300 ${isFree ? "bg-emerald-500" : "bg-terracotta-500"}"
+                style="width: ${totals.freeDeliveryProgressPct}%"
+              ></div>
+            </div>
+          </div>
+        `;
+      }
+
+      if (state.cart.length === 0) {
+        return `
+          ${headerHTML}
+          ${modeSwitchHTML}
+          ${freeDeliveryBarHTML}
+          <div class="p-8 text-center flex-1 flex flex-col items-center justify-center space-y-3">
+            <div class="w-16 h-16 rounded-full bg-cream border border-stone-200 flex items-center justify-center text-3xl">🥢</div>
+            <div class="font-black text-charcoal">購物車尚未加入餐點</div>
+            <p class="text-xs text-slate-400 max-w-[230px] leading-relaxed">
+              點擊左側餐點的「選擇規格 / 加入」，可自由調整辣度、冰塊甜度與美味加料！
+            </p>
+          </div>
+        `;
+      }
+
+      const itemsHTML = `
+        <div class="flex-1 overflow-y-auto divide-y divide-stone-100 px-4">
+          ${state.cart
+            .map(
+              (item, idx) => `
+              <div class="py-3.5 flex items-start justify-between gap-2.5">
+                <div class="min-w-0 flex-1">
+                  <div class="font-black text-sm text-charcoal leading-snug">${item.name}</div>
+                  <div class="text-[11px] text-slate-500 mt-0.5 leading-relaxed bg-cream px-2 py-0.5 rounded-md inline-block border border-stone-200/70">
+                    ${item.summaryLabel}
+                  </div>
+                  <div class="text-xs font-num font-bold text-terracotta-600 mt-1">
+                    ${formatCurrency(item.unitPrice)} × ${item.qty} = ${formatCurrency(item.unitPrice * item.qty)}
+                  </div>
+                </div>
+
+                <div class="flex flex-col items-end gap-1.5 shrink-0">
+                  <div class="flex items-center gap-1 bg-cream border border-stone-200 rounded-xl p-0.5">
+                    <button type="button" data-cart-idx="${idx}" class="cart-dec-btn w-8 h-8 rounded-lg bg-white hover:bg-stone-100 text-charcoal font-black text-sm flex items-center justify-center">−</button>
+                    <span class="w-6 text-center font-num font-bold text-xs text-charcoal">${item.qty}</span>
+                    <button type="button" data-cart-idx="${idx}" class="cart-inc-btn w-8 h-8 rounded-lg bg-terracotta-500 text-white font-black text-sm flex items-center justify-center">+</button>
+                  </div>
+                  <button type="button" data-cart-idx="${idx}" class="cart-del-btn text-[11px] text-slate-400 hover:text-red-600">
+                    移除
+                  </button>
+                </div>
+              </div>
+            `
+            )
+            .join("")}
+        </div>
+      `;
+
+      const promoApplied = state.appliedPromoCode;
+      const promoInputHTML = `
+        <div class="px-4 py-2.5 bg-white border-t border-stone-200 space-y-2 shrink-0">
+          <div class="flex items-center gap-1.5">
+            <input
+              type="text"
+              value="${promoApplied ? promoApplied.code : ""}"
+              placeholder="輸入優惠碼（WELCOME50 / VIP88）"
+              class="cart-promo-input flex-1 px-3 py-2 rounded-xl border border-stone-300 text-xs font-num uppercase focus:outline-none focus:ring-2 focus:ring-terracotta-500"
+            />
+            <button type="button" class="cart-apply-promo-btn px-3.5 py-2 rounded-xl bg-charcoal hover:bg-slate-900 text-white text-xs font-bold shrink-0">
+              套用
+            </button>
+          </div>
+          ${
+            promoApplied
+              ? `<div class="flex items-center justify-between text-[11px] px-2.5 py-1 rounded-lg ${
+                  totals.discountAmount > 0 ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-800"
+                }">
+                  <span>🎟️ ${promoApplied.code}：${
+                    totals.discountAmount > 0
+                      ? `已折抵 ${formatCurrency(totals.discountAmount)}`
+                      : `需滿 ${formatCurrency(promoApplied.minSubtotal)} 才可使用`
+                  }</span>
+                  <button type="button" class="cart-remove-promo-btn font-bold underline">取消</button>
+                </div>`
+              : `<div class="flex items-center gap-1.5 text-[11px] text-slate-400">
+                  <span>快速套用：</span>
+                  <button type="button" data-quick-promo="WELCOME50" class="quick-promo-chip text-terracotta-600 font-num font-bold hover:underline">WELCOME50</button>
+                  <span>•</span>
+                  <button type="button" data-quick-promo="VIP88" class="quick-promo-chip text-terracotta-600 font-num font-bold hover:underline">VIP88</button>
+                </div>`
+          }
+        </div>
+      `;
+
+      const footerHTML = `
+        ${promoInputHTML}
+        <div class="p-4 bg-cream border-t border-stone-200 space-y-3 shrink-0">
+          <div class="space-y-1 text-xs">
+            <div class="flex justify-between text-slate-600">
+              <span>餐點小計</span>
+              <span class="font-num font-bold">${formatCurrency(totals.subtotal)}</span>
+            </div>
+            ${
+              totals.discountAmount > 0
+                ? `<div class="flex justify-between text-emerald-600 font-bold">
+                    <span>優惠碼折抵 (${promoApplied.code})</span>
+                    <span class="font-num">-${formatCurrency(totals.discountAmount)}</span>
+                   </div>`
+                : ""
+            }
+            <div class="flex justify-between text-slate-600">
+              <span>外送運費（${state.diningType}）</span>
+              <span class="font-num font-bold ${totals.deliveryFee === 0 ? "text-emerald-600" : ""}">
+                ${totals.deliveryFee === 0 ? "NT$ 0" : formatCurrency(totals.deliveryFee)}
+              </span>
+            </div>
+            <div class="flex justify-between items-baseline pt-2 border-t border-stone-200">
+              <span class="font-black text-sm text-charcoal">應付總金額</span>
+              <span class="text-xl font-num font-black text-terracotta-600">${formatCurrency(totals.grandTotal)}</span>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            class="cart-checkout-btn w-full py-3.5 px-5 rounded-2xl bg-terracotta-500 hover:bg-terracotta-600 active:scale-[0.99] text-white font-black text-sm shadow-lg shadow-terracotta-500/25 flex items-center justify-center gap-2 transition-all"
+          >
+            <span>前往結帳填寫資料</span>
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path d="m9 18 6-6-6-6" />
+            </svg>
+          </button>
+        </div>
+      `;
+
+      return `${headerHTML}${modeSwitchHTML}${freeDeliveryBarHTML}${itemsHTML}${footerHTML}`;
+    }
+
+    function applyPromoCodeString(rawCode) {
+      const code = String(rawCode || "").trim().toUpperCase();
+      if (!code) {
+        showToast("請輸入優惠碼", "warning");
+        return;
+      }
+      const found = PROMO_CODES[code];
+      if (!found) {
+        showToast("無效的優惠碼，請嘗試 WELCOME50 或 VIP88", "error");
+        return;
+      }
+      state.appliedPromoCode = found;
+      renderCart();
+      showToast(`已套用優惠碼 ${found.code}（${found.label}）`);
+    }
+
+    function bindCartEvents(container) {
+      container.querySelectorAll(".cart-mode-btn").forEach((btn) =>
+        btn.addEventListener("click", () => syncDiningTypeUI(btn.dataset.cartMode))
+      );
+      container.querySelectorAll(".cart-inc-btn").forEach((btn) =>
+        btn.addEventListener("click", () => {
+          const idx = Number(btn.dataset.cartIdx);
+          if (state.cart[idx]) {
+            state.cart[idx].qty += 1;
+            renderMenu();
+            renderCart();
+          }
+        })
+      );
+      container.querySelectorAll(".cart-dec-btn").forEach((btn) =>
+        btn.addEventListener("click", () => {
+          const idx = Number(btn.dataset.cartIdx);
+          if (state.cart[idx]) {
+            state.cart[idx].qty -= 1;
+            if (state.cart[idx].qty <= 0) state.cart.splice(idx, 1);
+            renderMenu();
+            renderCart();
+          }
+        })
+      );
+      container.querySelectorAll(".cart-del-btn").forEach((btn) =>
+        btn.addEventListener("click", () => {
+          const idx = Number(btn.dataset.cartIdx);
+          state.cart.splice(idx, 1);
+          renderMenu();
+          renderCart();
+        })
+      );
+      container.querySelectorAll(".cart-clear-btn").forEach((btn) =>
+        btn.addEventListener("click", () => {
+          state.cart = [];
+          state.appliedPromoCode = null;
+          renderMenu();
+          renderCart();
+          showToast("已清空購物車", "warning");
+        })
+      );
+      container.querySelectorAll(".cart-apply-promo-btn").forEach((btn) =>
+        btn.addEventListener("click", () => {
+          const input = container.querySelector(".cart-promo-input");
+          applyPromoCodeString(input ? input.value : "");
+        })
+      );
+      container.querySelectorAll(".quick-promo-chip").forEach((btn) =>
+        btn.addEventListener("click", () => applyPromoCodeString(btn.dataset.quickPromo))
+      );
+      container.querySelectorAll(".cart-remove-promo-btn").forEach((btn) =>
+        btn.addEventListener("click", () => {
+          state.appliedPromoCode = null;
+          renderCart();
+          showToast("已移除優惠碼", "warning");
+        })
+      );
+      container.querySelectorAll(".cart-close-drawer-btn").forEach((btn) =>
+        btn.addEventListener("click", closeMobileCartDrawer)
+      );
+      container.querySelectorAll(".cart-checkout-btn").forEach((btn) =>
+        btn.addEventListener("click", () => {
+          closeMobileCartDrawer();
+          openCheckoutModal();
+        })
+      );
+    }
+
+    function renderCart() {
+      const desktopEl = document.getElementById("desktopCartContainer");
+      const mobileEl = document.getElementById("mobileDrawerCartContainer");
+
+      desktopEl.innerHTML = buildCartHTML(false);
+      mobileEl.innerHTML = buildCartHTML(true);
+
+      bindCartEvents(desktopEl);
+      bindCartEvents(mobileEl);
+
+      const totals = calculateTotals();
+      document.getElementById("mobileBadgeCount").textContent = totals.totalQty;
+      document.getElementById("mobileBarTotal").textContent = formatCurrency(totals.grandTotal);
+    }
+
+    function openMobileCartDrawer() {
+      document.getElementById("mobileCartDrawer").classList.remove("hidden");
+    }
+
+    function closeMobileCartDrawer() {
+      document.getElementById("mobileCartDrawer").classList.add("hidden");
+    }
+
+    // ==================== 結帳視窗與表單邏輯 ====================
+    function renderTableQuickGrid() {
+      const grid = document.getElementById("tableQuickGrid");
+      grid.innerHTML = TABLE_NUMBERS.map((tbl) => {
+        const active = state.selectedTable === tbl;
+        return `
+          <button type="button" data-table="${tbl}" class="table-select-btn py-2.5 rounded-xl font-num text-xs font-black border transition-all ${
+            active
+              ? "bg-terracotta-500 text-white border-terracotta-500 shadow-xs"
+              : "bg-cream text-charcoal border-stone-200 hover:border-terracotta-300"
+          }">${tbl}</button>
+        `;
+      }).join("");
+
+      grid.querySelectorAll(".table-select-btn").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          state.selectedTable = btn.dataset.table;
+          renderTableQuickGrid();
+        });
+      });
+    }
+
+    function updateCheckoutDynamicSections() {
+      const selected = document.querySelector('input[name="checkoutDiningType"]:checked')?.value || state.diningType;
+      state.diningType = selected;
+
+      document.getElementById("checkoutTableSection").classList.toggle("hidden", selected !== "內用");
+      document.getElementById("checkoutPickupSection").classList.toggle("hidden", selected !== "外帶自取");
+      document.getElementById("checkoutAddressSection").classList.toggle("hidden", selected !== "店家外送");
+
+      const totals = calculateTotals();
+      document.getElementById("checkoutDeliveryBadgeHint").textContent = `滿$${totals.threshold}免運`;
+      if (selected === "店家外送") {
+        document.getElementById("checkoutAddressFeeNote").textContent =
+          totals.amountNeededForFreeDelivery > 0
+            ? `未滿 $${totals.threshold}，運費 ${formatCurrency(totals.baseFee)}`
+            : `已達滿 $${totals.threshold} 免運門檻！`;
+      }
+
+      document.getElementById("checkoutQtyCount").textContent = totals.totalQty;
+      document.getElementById("checkoutSubtotalText").textContent = formatCurrency(totals.subtotal);
+
+      const discountRow = document.getElementById("checkoutDiscountRow");
+      if (totals.discountAmount > 0 && state.appliedPromoCode) {
+        discountRow.classList.remove("hidden");
+        document.getElementById("checkoutPromoTag").textContent = state.appliedPromoCode.code;
+        document.getElementById("checkoutDiscountText").textContent = `-${formatCurrency(totals.discountAmount)}`;
+      } else {
+        discountRow.classList.add("hidden");
+      }
+
+      document.getElementById("checkoutDeliveryText").textContent =
+        totals.deliveryFee === 0 ? "NT$ 0 (免運)" : formatCurrency(totals.deliveryFee);
+      document.getElementById("checkoutGrandTotalText").textContent = formatCurrency(totals.grandTotal);
+    }
+
+    function openCheckoutModal() {
+      if (state.cart.length === 0) {
+        showToast("請先將餐點加入購物車！", "warning");
+        return;
+      }
+
+      const check = checkEmailConfigReady();
+      const banner = document.getElementById("checkoutEngineBanner");
+      if (check.ready) {
+        banner.className = "rounded-2xl p-3.5 border bg-emerald-50 border-emerald-200 text-emerald-900 flex items-center justify-between gap-2 text-xs";
+        banner.innerHTML = `<span>✅ <strong>${check.reason}：</strong>送出後將即時將點餐紀錄寄給店家。</span>`;
+      } else {
+        banner.className = "rounded-2xl p-3.5 border bg-amber-50 border-amber-200 text-amber-900 flex items-center justify-between gap-2 text-xs";
+        banner.innerHTML = `<span>⚠️ <strong>提醒：</strong>${check.reason}</span>`;
+      }
+
+      document.getElementById("checkoutItemsList").innerHTML = state.cart
+        .map(
+          (item) => `
+          <div class="flex justify-between items-start gap-2">
+            <div>
+              <span class="font-bold">${item.name}</span>
+              <span class="text-slate-400 font-num"> × ${item.qty}</span>
+              <div class="text-[11px] text-slate-500">${item.summaryLabel}</div>
+            </div>
+            <span class="font-num font-bold shrink-0">${formatCurrency(item.unitPrice * item.qty)}</span>
+          </div>
+        `
+        )
+        .join("");
+
+      renderTableQuickGrid();
+      syncDiningTypeUI(state.diningType);
+      ["checkoutTableError", "checkoutAddressError", "checkoutNameError", "checkoutPhoneError"].forEach((id) =>
+        document.getElementById(id).classList.add("hidden")
+      );
+      document.getElementById("checkoutModal").classList.remove("hidden");
+    }
+
+    function closeCheckoutModal() {
+      document.getElementById("checkoutModal").classList.add("hidden");
+    }
+
+    function validateCheckoutForm() {
+      ["checkoutTableError", "checkoutAddressError", "checkoutNameError", "checkoutPhoneError"].forEach((id) =>
+        document.getElementById(id).classList.add("hidden")
+      );
+
+      let valid = true;
+      if (state.diningType === "內用" && !state.selectedTable) {
+        document.getElementById("checkoutTableError").classList.remove("hidden");
+        valid = false;
+      }
+      if (state.diningType === "店家外送" && !document.getElementById("deliveryAddressInput").value.trim()) {
+        document.getElementById("checkoutAddressError").classList.remove("hidden");
+        valid = false;
+      }
+      if (!document.getElementById("customerNameInput").value.trim()) {
+        document.getElementById("checkoutNameError").classList.remove("hidden");
+        valid = false;
+      }
+      const phone = document.getElementById("customerPhoneInput").value.trim();
+      if (!phone || phone.length < 7) {
+        document.getElementById("checkoutPhoneError").classList.remove("hidden");
+        valid = false;
+      }
+      return valid;
+    }
+
+    // ==================== 建構完整訂單物件 ====================
+    function generateOrderNumber() {
+      const now = new Date();
+      const datePart = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}${String(now.getDate()).padStart(2, "0")}`;
+      let seq = { date: datePart, count: 0 };
+      try {
+        const raw = localStorage.getItem(KEYS.ORDER_SEQ);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed.date === datePart) seq.count = Number(parsed.count) || 0;
+        }
+      } catch (e) {}
+      seq.count += 1;
+      try {
+        localStorage.setItem(KEYS.ORDER_SEQ, JSON.stringify(seq));
+      } catch (e) {}
+      return `ORD-${datePart}-${String(seq.count).padStart(3, "0")}`;
+    }
+
+    function buildOrderPayload(isTestOrder = false) {
+      if (isTestOrder) {
+        const orderId = `TEST-${Date.now().toString().slice(-6)}`;
+        const orderTime = new Date().toLocaleString("zh-TW", { hour12: false });
+        const itemsText = "• 招牌手切滷肉飯 (不辣 / 加滷蛋(+$15)) × 1 = NT$ 80\n• 珍珠鮮奶茶 (少冰 / 半糖) × 1 = NT$ 65";
+        const subject = `【新訂單通知】#${orderId} - 系統測試員 (NT$145)`;
+        const plainText = [
+          `====================================`,
+          `【${state.storeConfig.storeName}】Web3Forms 連線測試訂單`,
+          `====================================`,
+          `訂單編號：#${orderId}`,
+          `下單時間：${orderTime}`,
+          `用餐方式：內用（桌號：A1）`,
+          `顧客姓名：系統測試員（老闆測試）`,
+          `聯絡電話：0900-000-000`,
+          `付款方式：現場現金`,
+          `------------------------------------`,
+          `點餐明細：`,
+          itemsText,
+          `------------------------------------`,
+          `餐點小計：NT$ 145`,
+          `優惠折扣：NT$ 0`,
+          `外送運費：NT$ 0`,
+          `應付總金額：NT$ 145`,
+          `訂單備註：老闆後台測試寄信連線`,
+          `====================================`
+        ].join("\n");
+
+        return {
+          orderId,
+          orderTime,
+          customerName: "系統測試員",
+          customerPhone: "0900-000-000",
+          diningType: "內用",
+          diningDetail: "內用（桌號：A1）",
+          paymentMethod: "現場現金",
+          notes: "老闆後台測試寄信連線",
+          promoCode: "無",
+          items: [
+            { name: "招牌手切滷肉飯", qty: 1, unitPrice: 80, summaryLabel: "不辣 / 加滷蛋(+$15)" },
+            { name: "珍珠鮮奶茶", qty: 1, unitPrice: 65, summaryLabel: "少冰 / 半糖" }
+          ],
+          totalQty: 2,
+          subtotal: 145,
+          discountAmount: 0,
+          deliveryFee: 0,
+          grandTotal: 145,
+          itemsText,
+          subject,
+          plainText
+        };
+      }
+
+      const totals = calculateTotals();
+      const orderId = generateOrderNumber();
+      const orderTime = new Date().toLocaleString("zh-TW", { hour12: false });
+      const customerName = document.getElementById("customerNameInput").value.trim();
+      const customerPhone = document.getElementById("customerPhoneInput").value.trim();
+      const paymentMethod = document.querySelector('input[name="paymentMethod"]:checked')?.value || "現場現金";
+      const notes = document.getElementById("orderNotesInput").value.trim() || "無特殊備註";
+
+      let diningDetail = state.diningType;
+      if (state.diningType === "內用") {
+        diningDetail = `內用（桌號：${state.selectedTable}）`;
+      } else if (state.diningType === "外帶自取") {
+        const pickupTime = document.getElementById("pickupTimeSelect").value;
+        diningDetail = `外帶自取（${pickupTime}）`;
+      } else {
+        const addr = document.getElementById("deliveryAddressInput").value.trim();
+        diningDetail = `店家外送（地址：${addr}）`;
+      }
+
+      const promoLabel =
+        totals.discountAmount > 0 && state.appliedPromoCode
+          ? `${state.appliedPromoCode.code} (-${formatCurrency(totals.discountAmount)})`
+          : "無";
+
+      const itemsText = state.cart
+        .map((it) => `• ${it.name} [${it.summaryLabel}] × ${it.qty} = ${formatCurrency(it.unitPrice * it.qty)}`)
+        .join("\n");
+
+      const subject = `【新訂單通知】#${orderId} - ${customerName} (NT$${Math.round(totals.grandTotal)})`;
+
+      const plainText = [
+        `====================================`,
+        `【${state.storeConfig.storeName}】新訂單通知`,
+        `====================================`,
+        `訂單編號：#${orderId}`,
+        `下單時間：${orderTime}`,
+        `用餐方式：${diningDetail}`,
+        `顧客姓名：${customerName}`,
+        `聯絡電話：${customerPhone}`,
+        `付款方式：${paymentMethod}`,
+        `------------------------------------`,
+        `點餐明細（共 ${totals.totalQty} 份）：`,
+        itemsText,
+        `------------------------------------`,
+        `餐點小計：${formatCurrency(totals.subtotal)}`,
+        `優惠折扣：${promoLabel}`,
+        `外送運費：${formatCurrency(totals.deliveryFee)}`,
+        `應付總金額：${formatCurrency(totals.grandTotal)}`,
+        `訂單備註：${notes}`,
+        `====================================`
+      ].join("\n");
+
+      return {
+        orderId,
+        orderTime,
+        customerName,
+        customerPhone,
+        diningType: state.diningType,
+        diningDetail,
+        paymentMethod,
+        notes,
+        promoCode: promoLabel,
+        items: state.cart.map((it) => ({ ...it })),
+        totalQty: totals.totalQty,
+        subtotal: totals.subtotal,
+        discountAmount: totals.discountAmount,
+        deliveryFee: totals.deliveryFee,
+        grandTotal: totals.grandTotal,
+        itemsText,
+        subject,
+        plainText
+      };
+    }
+
+    // ==================== 核心寄信派發中心（Web3Forms 主力 + 多引擎備援） ====================
+    function appendDiagnosticsLog(msg, level = "info") {
+      const consoleEl = document.getElementById("diagnosticsLogConsole");
+      if (!consoleEl) return;
+
+      const timeStr = new Date().toLocaleTimeString("zh-TW", { hour12: false });
+      const colorMap = {
+        info: "text-slate-300",
+        success: "text-emerald-400 font-bold",
+        warn: "text-amber-300",
+        error: "text-rose-400 font-bold"
+      };
+
+      const line = document.createElement("div");
+      line.className = colorMap[level] || colorMap.info;
+      line.textContent = `[${timeStr}] ${msg}`;
+      consoleEl.appendChild(line);
+      consoleEl.scrollTop = consoleEl.scrollHeight;
+    }
+
+    function triggerFormSubmitHiddenFormFallback(targetEmail, order) {
+      const frame = document.getElementById("hiddenMailFrame");
+      const form = document.createElement("form");
+      form.action = `https://formsubmit.co/${encodeURIComponent(targetEmail)}`;
+      form.method = "POST";
+      form.target = frame.name;
+      form.style.display = "none";
+
+      const fields = {
+        _subject: order.subject,
+        _template: "table",
+        _captcha: "false",
+        訂單編號: `#${order.orderId}`,
+        下單時間: order.orderTime,
+        用餐方式: order.diningDetail,
+        顧客姓名: `${order.customerName} (${order.customerPhone})`,
+        付款方式: order.paymentMethod,
+        點餐明細: order.itemsText,
+        應付總金額: formatCurrency(order.grandTotal),
+        訂單備註: order.notes
+      };
+
+      Object.entries(fields).forEach(([key, val]) => {
+        const input = document.createElement("input");
+        input.type = "hidden";
+        input.name = key;
+        input.value = val;
+        form.appendChild(input);
+      });
+
+      document.body.appendChild(form);
+      form.submit();
+      setTimeout(() => form.remove(), 2000);
+    }
+
+    function triggerMailtoApp(targetEmail, order) {
+      const mailtoUrl = `mailto:${encodeURIComponent(targetEmail || "")}?subject=${encodeURIComponent(order.subject)}&body=${encodeURIComponent(order.plainText)}`;
+      const a = document.createElement("a");
+      a.href = mailtoUrl;
+      a.style.display = "none";
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => a.remove(), 500);
+    }
+
+    async function dispatchOrderEmail(order, options = { showProgressModal: true }) {
+      const cfg = state.emailConfig;
+      const engine = cfg.engine;
+      const targetEmail = (cfg.ownerEmail || "").trim();
+
+      appendDiagnosticsLog(`開始派送訂單 #${order.orderId}｜使用引擎：${getEngineDisplayName(engine)}`, "info");
+
+      const updateStepUI = (stepNum, status) => {
+        if (!options.showProgressModal) return;
+        const row = document.getElementById(`step${stepNum}Row`);
+        const icon = document.getElementById(`step${stepNum}Icon`);
+        if (status === "active") {
+          row.className = "flex items-center gap-3 text-sm font-black text-terracotta-600";
+          icon.className = "w-7 h-7 rounded-full bg-terracotta-500 text-white flex items-center justify-center text-xs font-num animate-pulse";
+        } else if (status === "done") {
+          row.className = "flex items-center gap-3 text-sm font-bold text-emerald-700";
+          icon.className = "w-7 h-7 rounded-full bg-emerald-500 text-white flex items-center justify-center text-xs";
+          icon.textContent = "✓";
+        }
+      };
+
+      if (options.showProgressModal) {
+        ["1", "2", "3"].forEach((n) => {
+          document.getElementById(`step${n}Row`).className = "flex items-center gap-3 text-sm font-bold text-slate-400";
+          const ic = document.getElementById(`step${n}Icon`);
+          ic.className = "w-7 h-7 rounded-full bg-stone-200 text-slate-500 flex items-center justify-center text-xs font-num";
+          ic.textContent = n;
+        });
+        document.getElementById("progressEngineLabel").textContent = `使用引擎：${getEngineDisplayName(engine)}`;
+        document.getElementById("step2Label").textContent =
+          engine === "web3forms" ? "連線 Web3Forms 寄信伺服器" : `連線 ${getEngineDisplayName(engine)} 伺服器`;
+        document.getElementById("sendingProgressModal").classList.remove("hidden");
+        updateStepUI(1, "active");
+        await new Promise((r) => setTimeout(r, 300));
+        updateStepUI(1, "done");
+        updateStepUI(2, "active");
+      }
+
+      let result = {
+        status: "pending_manual",
+        badgeText: "",
+        detailText: "",
+        engineUsed: getEngineDisplayName(engine)
+      };
+
+      const check = checkEmailConfigReady();
+
+      if (!check.ready) {
+        appendDiagnosticsLog(`設定檢查未通過：${check.reason}`, "warn");
+        result.status = "pending_manual";
+        result.badgeText = "⚠️ 尚未完成寄信設定";
+        result.detailText = `${check.reason}。您仍可點擊下方「重試寄送」或「複製訂單明細」。`;
+      } else if (engine === "web3forms") {
+        try {
+          const activeKey = (cfg.web3formsKey || DEFAULT_CONFIG.web3formsKey).trim();
+          appendDiagnosticsLog(`連線至 https://api.web3forms.com/submit (Key: ${activeKey.slice(0, 8)}****)...`, "info");
+
+          const payload = {
+            access_key: activeKey,
+            subject: order.subject,
+            from_name: `${state.storeConfig.storeName} 線上點餐系統`,
+            訂單編號: `#${order.orderId}`,
+            下單時間: order.orderTime,
+            用餐方式: order.diningDetail,
+            顧客姓名: order.customerName,
+            聯絡電話: order.customerPhone,
+            付款方式: order.paymentMethod,
+            點餐明細: order.itemsText,
+            餐點小計: formatCurrency(order.subtotal),
+            優惠折扣: order.promoCode,
+            外送運費: formatCurrency(order.deliveryFee),
+            應付總金額: formatCurrency(order.grandTotal),
+            訂單備註: order.notes
+          };
+
+          if (isValidEmail(targetEmail)) {
+            payload.replyto = targetEmail;
+          }
+
+          const resp = await fetch("https://api.web3forms.com/submit", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Accept: "application/json"
+            },
+            body: JSON.stringify(payload)
+          });
+
+          const data = await resp.json().catch(() => ({}));
+          appendDiagnosticsLog(`Web3Forms HTTP 狀態碼：${resp.status}｜回應：${JSON.stringify(data)}`, resp.ok ? "success" : "error");
+
+          if (resp.ok && data.success) {
+            result.status = "sent_web3forms";
+            result.badgeText = "✅ 已透過 Web3Forms 自動寄出訂單信件！";
+            result.detailText = "訂單明細與金額已即時寄達您綁定 Web3Forms 金鑰的收單信箱，請留意收件匣或垃圾信件匣。";
+          } else {
+            throw new Error(data.message || `HTTP ${resp.status}`);
+          }
+        } catch (err) {
+          appendDiagnosticsLog(`Web3Forms 連線失敗：${err.message}`, "error");
+          result.status = "pending_manual";
+          result.badgeText = "⚠️ 網路連線受限，暫未自動寄達";
+          result.detailText = `原因：${err.message}。請確認網路連線正常後點擊下方「🔄 重試寄送至信箱」，或複製明細保存。`;
+        }
+      } else if (engine === "emailjs") {
+        try {
+          appendDiagnosticsLog(`連線至 https://api.emailjs.com/api/v1.0/email/send ...`, "info");
+          const resp = await fetch("https://api.emailjs.com/api/v1.0/email/send", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              service_id: cfg.emailjsServiceId.trim(),
+              template_id: cfg.emailjsTemplateId.trim(),
+              user_id: cfg.emailjsPublicKey.trim(),
+              template_params: {
+                to_email: targetEmail,
+                subject: order.subject,
+                order_id: `#${order.orderId}`,
+                order_time: order.orderTime,
+                customer_name: order.customerName,
+                customer_phone: order.customerPhone,
+                dining_detail: order.diningDetail,
+                payment_method: order.paymentMethod,
+                order_details: order.itemsText,
+                grand_total: formatCurrency(order.grandTotal),
+                notes: order.notes,
+                message: order.plainText
+              }
+            })
+          });
+          const textResp = await resp.text();
+          appendDiagnosticsLog(`EmailJS HTTP 狀態碼：${resp.status}｜回應：${textResp}`, resp.ok ? "success" : "error");
+
+          if (resp.ok) {
+            result.status = "sent_emailjs";
+            result.badgeText = "✅ 已透過 EmailJS 自動寄出訂單信件！";
+            result.detailText = `訂單明細已成功發送至 ${targetEmail}。`;
+          } else {
+            throw new Error(textResp || `HTTP ${resp.status}`);
+          }
+        } catch (err) {
+          appendDiagnosticsLog(`EmailJS 發送失敗：${err.message}`, "error");
+          result.status = "pending_manual";
+          result.badgeText = "⚠️ EmailJS 連線失敗，請重試寄送";
+          result.detailText = `錯誤原因：${err.message}。`;
+        }
+      } else if (engine === "formsubmit") {
+        try {
+          appendDiagnosticsLog(`嘗試 FormSubmit AJAX 通道：https://formsubmit.co/ajax/${targetEmail} ...`, "info");
+          const resp = await fetch(`https://formsubmit.co/ajax/${encodeURIComponent(targetEmail)}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Accept: "application/json" },
+            body: JSON.stringify({
+              _subject: order.subject,
+              _template: "table",
+              _captcha: "false",
+              訂單編號: `#${order.orderId}`,
+              下單時間: order.orderTime,
+              用餐方式: order.diningDetail,
+              顧客姓名: order.customerName,
+              聯絡電話: order.customerPhone,
+              付款方式: order.paymentMethod,
+              點餐明細: order.itemsText,
+              應付總金額: formatCurrency(order.grandTotal),
+              訂單備註: order.notes
+            })
+          });
+          const data = await resp.json().catch(() => ({}));
+          if (resp.ok && (data.success === "true" || data.success === true)) {
+            result.status = "sent_formsubmit_ajax";
+            result.badgeText = "✅ 已透過 FormSubmit 自動寄出訂單信件！";
+            result.detailText = `訂單已寄送至 ${targetEmail}。`;
+          } else {
+            throw new Error("切換至隱藏表單通道");
+          }
+        } catch (err) {
+          triggerFormSubmitHiddenFormFallback(targetEmail, order);
+          appendDiagnosticsLog(`已透過 FormSubmit 隱藏表單通道送出至 ${targetEmail}`, "success");
+          result.status = "sent_formsubmit_iframe";
+          result.badgeText = "✅ 已透過 FormSubmit 雙保險通道派送！";
+          result.detailText = `訂單已送出至 ${targetEmail}（首次使用請至信箱點擊 FormSubmit 啟用連結）。`;
+        }
+      } else if (engine === "mailto") {
+        appendDiagnosticsLog(`喚起本機信箱 App (mailto:${targetEmail}) ...`, "success");
+        triggerMailtoApp(targetEmail, order);
+        result.status = "sent_mailto";
+        result.badgeText = "📧 已喚起本機信箱 App 準備寄出";
+        result.detailText = `請在開啟的郵件軟體中按下「傳送」即可寄達 ${targetEmail}。`;
+      }
+
+      if (options.showProgressModal) {
+        updateStepUI(2, "done");
+        updateStepUI(3, "active");
+        await new Promise((r) => setTimeout(r, 300));
+        updateStepUI(3, "done");
+        await new Promise((r) => setTimeout(r, 220));
+        document.getElementById("sendingProgressModal").classList.add("hidden");
+      }
+
+      return result;
+    }
+
+    // ==================== 電子訂單收據畫面渲染 ====================
+    function showReceiptModal(order) {
+      state.lastReceiptOrder = order;
+
+      document.getElementById("receiptOrderId").textContent = `#${order.orderId}`;
+      document.getElementById("receiptTime").textContent = order.orderTime;
+      document.getElementById("receiptCustomer").textContent = `${order.customerName} (${order.customerPhone})`;
+      document.getElementById("receiptDining").textContent = order.diningDetail;
+      document.getElementById("receiptPayment").textContent = order.paymentMethod;
+      document.getElementById("receiptNotes").textContent = order.notes;
+
+      const box = document.getElementById("receiptStatusBadgeBox");
+      const sendInfo = order.sendResult;
+      const isSuccess = sendInfo.status.startsWith("sent_");
+
+      box.className = isSuccess
+        ? "rounded-2xl p-4 border bg-emerald-50 border-emerald-200 text-emerald-900 space-y-1"
+        : "rounded-2xl p-4 border bg-amber-50 border-amber-200 text-amber-900 space-y-1";
+
+      box.innerHTML = `
+        <div class="font-black text-sm">${sendInfo.badgeText}</div>
+        <p class="text-xs leading-relaxed">${sendInfo.detailText}</p>
+      `;
+
+      document.getElementById("receiptItemsList").innerHTML = order.items
+        .map(
+          (it) => `
+          <div class="py-2.5 flex justify-between items-start gap-2 text-xs sm:text-sm">
+            <div>
+              <div class="font-bold text-charcoal">${it.name} <span class="text-slate-400 font-num">× ${it.qty}</span></div>
+              <div class="text-[11px] text-slate-500">${it.summaryLabel}</div>
+            </div>
+            <span class="font-num font-bold text-charcoal shrink-0">${formatCurrency(it.unitPrice * it.qty)}</span>
+          </div>
+        `
+        )
+        .join("");
+
+      document.getElementById("receiptSubtotal").textContent = formatCurrency(order.subtotal);
+      const discRow = document.getElementById("receiptDiscountRow");
+      if (order.discountAmount > 0) {
+        discRow.classList.remove("hidden");
+        document.getElementById("receiptDiscount").textContent = `-${formatCurrency(order.discountAmount)} (${order.promoCode})`;
+      } else {
+        discRow.classList.add("hidden");
+      }
+      document.getElementById("receiptDelivery").textContent =
+        order.deliveryFee === 0 ? "NT$ 0 (免運)" : formatCurrency(order.deliveryFee);
+      document.getElementById("receiptGrandTotal").textContent = formatCurrency(order.grandTotal);
+
+      document.getElementById("receiptModal").classList.remove("hidden");
+    }
+
+    function copyTextSafely(text) {
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      ta.style.position = "fixed";
+      ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.select();
+      try {
+        const ok = document.execCommand("copy");
+        if (ok) showToast("已複製完整訂單明細到剪貼簿！");
+        else showToast("複製失敗，請手動選取複製", "warning");
+      } catch (e) {
+        showToast("無法存取剪貼簿", "warning");
+      } finally {
+        document.body.removeChild(ta);
+      }
+    }
+
+    // ==================== 手機一鍵下載完整 HTML 檔案生成器 ====================
+    function downloadSelfContainedHtmlFile() {
+      try {
+        // 取得目前完整 HTML 原始碼，並將最新設定同步回 DEFAULT_CONFIG 字串中
+        let htmlSource = "<!DOCTYPE html>\n" + document.documentElement.outerHTML;
+        const latestDefaultObjStr = JSON.stringify(state.emailConfig, null, 6);
+        htmlSource = htmlSource.replace(
+          /const DEFAULT_CONFIG = \{[\s\S]*?\};/,
+          `const DEFAULT_CONFIG = ${latestDefaultObjStr};`
+        );
+
+        const blob = new Blob([htmlSource], { type: "text/html;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = "index.html";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        setTimeout(() => URL.revokeObjectURL(url), 1500);
+
+        appendDiagnosticsLog("已成功生成並觸發下載完整網頁檔案 index.html（內含您的 Web3Forms 金鑰）。", "success");
+        showToast("已開始下載 index.html！可直接上傳至 Netlify 或 Cloudflare 發布");
+      } catch (err) {
+        appendDiagnosticsLog(`下載檔案失敗：${err.message}`, "error");
+        showToast("下載檔案時發生錯誤，請使用瀏覽器分享/儲存功能", "error");
+      }
+    }
+
+    // ==================== 老闆後台管理中心（3 大分頁） ====================
+    function openAdminCenter(defaultTab = "email") {
+      const cfg = state.emailConfig;
+      document.querySelectorAll('input[name="emailEngineRadio"]').forEach((r) => {
+        r.checked = r.value === cfg.engine;
+      });
+      document.getElementById("adminOwnerEmailInput").value = cfg.ownerEmail || "";
+      document.getElementById("web3formsKeyInput").value = cfg.web3formsKey || DEFAULT_CONFIG.web3formsKey;
+      document.getElementById("emailjsServiceInput").value = cfg.emailjsServiceId || "";
+      document.getElementById("emailjsTemplateInput").value = cfg.emailjsTemplateId || "";
+      document.getElementById("emailjsPublicKeyInput").value = cfg.emailjsPublicKey || "";
+      updateAdminEngineFieldVisibility();
+
+      document.getElementById("adminStoreNameInput").value = state.storeConfig.storeName;
+      document.getElementById("adminDeliveryFeeInput").value = state.storeConfig.deliveryFee;
+      document.getElementById("adminFreeThresholdInput").value = state.storeConfig.freeDeliveryThreshold;
+
+      renderAdminOrdersTab();
+      renderAdminMenuStockTab();
+      switchAdminTab(defaultTab);
+      document.getElementById("adminCenterModal").classList.remove("hidden");
+    }
+
+    function closeAdminCenter() {
+      document.getElementById("adminCenterModal").classList.add("hidden");
+    }
+
+    function switchAdminTab(tabName) {
+      document.querySelectorAll(".admin-tab-btn").forEach((btn) => {
+        const active = btn.dataset.adminTab === tabName;
+        btn.className = `admin-tab-btn px-4 py-2.5 rounded-t-xl text-xs sm:text-sm border-b-2 transition-colors shrink-0 ${
+          active
+            ? "font-black border-terracotta-500 bg-white text-terracotta-600"
+            : "font-bold border-transparent text-slate-500 hover:text-charcoal"
+        }`;
+      });
+      document.querySelectorAll(".admin-tab-panel").forEach((panel) => {
+        panel.classList.toggle("hidden", panel.id !== `adminTabPanel-${tabName}`);
+      });
+    }
+
+    function updateAdminEngineFieldVisibility() {
+      const selected = document.querySelector('input[name="emailEngineRadio"]:checked')?.value || "web3forms";
+      ["web3forms", "emailjs", "formsubmit", "mailto"].forEach((eng) => {
+        document.getElementById(`engineFields-${eng}`).classList.toggle("hidden", eng !== selected);
+      });
+      const optLabel = document.getElementById("ownerEmailOptionalLabel");
+      if (optLabel) {
+        optLabel.textContent = selected === "web3forms" ? "（使用 Web3Forms 時為選填）" : "（必填・請輸入收單信箱）";
+      }
+    }
+
+    function collectAndSaveEmailConfigFromForm() {
+      const engine = document.querySelector('input[name="emailEngineRadio"]:checked')?.value || "web3forms";
+      const keyVal = document.getElementById("web3formsKeyInput").value.trim() || DEFAULT_CONFIG.web3formsKey;
+      state.emailConfig = {
+        engine,
+        ownerEmail: document.getElementById("adminOwnerEmailInput").value.trim(),
+        web3formsKey: keyVal,
+        emailjsServiceId: document.getElementById("emailjsServiceInput").value.trim(),
+        emailjsTemplateId: document.getElementById("emailjsTemplateInput").value.trim(),
+        emailjsPublicKey: document.getElementById("emailjsPublicKeyInput").value.trim()
+      };
+      saveEmailConfigToStorage();
+      updateTopStatusAndStoreUI();
+    }
+
+    // 分頁二：歷史訂單管理渲染
+    function renderAdminOrdersTab() {
+      const orders = state.orderHistory;
+      document.getElementById("adminTotalOrdersStat").textContent = `${orders.length} 筆`;
+      const revenue = orders.reduce((s, o) => s + Number(o.grandTotal || 0), 0);
+      document.getElementById("adminTotalRevenueStat").textContent = formatCurrency(revenue);
+
+      const container = document.getElementById("adminOrdersListContainer");
+      if (orders.length === 0) {
+        container.innerHTML = `
+          <div class="text-center py-12 bg-cream rounded-2xl border border-stone-200 space-y-2">
+            <div class="text-3xl">📭</div>
+            <div class="font-bold text-charcoal">尚無歷史訂單紀錄</div>
+            <p class="text-xs text-slate-500">顧客完成送單後，所有訂單都會自動保存在此處供您查詢或重新寄信。</p>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = orders
+        .map((ord, index) => {
+          const isSent = ord.sendResult?.status?.startsWith("sent_");
+          const statusBadge = isSent
+            ? `<span class="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[11px] font-bold">✅ 寄信成功</span>`
+            : `<span class="px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[11px] font-bold">⚠️ 待補寄</span>`;
+
+          return `
+            <details class="group bg-white rounded-2xl border border-stone-200 overflow-hidden shadow-2xs">
+              <summary class="cursor-pointer p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2 hover:bg-cream/60 select-none">
+                <div class="flex items-center gap-2.5 flex-wrap">
+                  <span class="font-num font-black text-sm text-charcoal">#${ord.orderId}</span>
+                  ${statusBadge}
+                  <span class="text-xs font-bold text-slate-600">${ord.customerName} (${ord.diningType})</span>
+                  <span class="text-xs text-slate-400 font-num">${ord.orderTime}</span>
+                </div>
+                <div class="flex items-center gap-3">
+                  <span class="font-num font-black text-base text-terracotta-600">${formatCurrency(ord.grandTotal)}</span>
+                  <span class="text-xs text-slate-400 group-open:rotate-180 transition-transform">▼</span>
+                </div>
+              </summary>
+
+              <div class="p-4 bg-cream border-t border-stone-200 space-y-3 text-xs">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-slate-700">
+                  <div><strong>聯絡電話：</strong><span class="font-num">${ord.customerPhone}</span></div>
+                  <div><strong>付款方式：</strong>${ord.paymentMethod}</div>
+                  <div class="sm:col-span-2"><strong>用餐細節：</strong>${ord.diningDetail}</div>
+                  <div class="sm:col-span-2"><strong>訂單備註：</strong>${ord.notes}</div>
+                </div>
+
+                <div class="bg-white p-3 rounded-xl border border-stone-200 whitespace-pre-line font-sans text-charcoal leading-relaxed">${ord.itemsText}</div>
+
+                <div class="flex flex-wrap items-center justify-end gap-2 pt-1">
+                  <button
+                    type="button"
+                    data-resend-idx="${index}"
+                    class="admin-resend-order-btn px-4 py-2 rounded-xl bg-terracotta-500 hover:bg-terracotta-600 text-white font-bold transition-colors"
+                  >
+                    🔄 重新寄信
+                  </button>
+                </div>
+              </div>
+            </details>
+          `;
+        })
+        .join("");
+
+      container.querySelectorAll(".admin-resend-order-btn").forEach((btn) => {
+        btn.addEventListener("click", async () => {
+          const idx = Number(btn.dataset.resendIdx);
+          const ord = state.orderHistory[idx];
+          if (!ord) return;
+          btn.disabled = true;
+          btn.textContent = "重新寄信中...";
+          const newResult = await dispatchOrderEmail(ord, { showProgressModal: false });
+          ord.sendResult = newResult;
+          saveOrderHistoryToStorage();
+          renderAdminOrdersTab();
+          showToast(`訂單 #${ord.orderId} 已重新執行寄信派送！`);
+        });
+      });
+    }
+
+    function exportOrdersToCSV() {
+      if (state.orderHistory.length === 0) {
+        showToast("目前沒有可匯出的訂單資料", "warning");
+        return;
+      }
+
+      const headers = ["訂單編號", "下單時間", "顧客姓名", "聯絡電話", "用餐方式", "付款方式", "餐點明細", "餐點小計", "優惠折扣", "外送運費", "應付總金額", "寄信狀態", "備註"];
+      const escapeCSV = (val) => `"${String(val ?? "").replace(/"/g, '""').replace(/\n/g, " | ")}"`;
+
+      const rows = state.orderHistory.map((o) => [
+        o.orderId,
+        o.orderTime,
+        o.customerName,
+        o.customerPhone,
+        o.diningDetail,
+        o.paymentMethod,
+        o.itemsText,
+        o.subtotal,
+        o.promoCode,
+        o.deliveryFee,
+        o.grandTotal,
+        o.sendResult?.badgeText || "",
+        o.notes
+      ].map(escapeCSV).join(","));
+
+      const csvContent = "\uFEFF" + [headers.join(","), ...rows].join("\n");
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `${state.storeConfig.storeName}_訂單報表_${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      showToast("已成功匯出 CSV 訂單報表！");
+    }
+
+    // 分頁三：菜單庫存管理列表渲染
+    function renderAdminMenuStockTab() {
+      const container = document.getElementById("adminMenuStockList");
+      container.innerHTML = MENU_ITEMS.map((item) => {
+        const isSoldOut = state.soldOutIds.includes(item.id);
+        return `
+          <div class="p-3 rounded-2xl border ${isSoldOut ? "bg-red-50/50 border-red-200" : "bg-white border-stone-200"} flex items-center justify-between gap-2">
+            <div class="min-w-0">
+              <div class="font-bold text-xs sm:text-sm text-charcoal truncate">${item.name}</div>
+              <div class="text-[11px] text-slate-500 font-num">${item.category} • ${formatCurrency(item.price)}</div>
+            </div>
+            <button
+              type="button"
+              data-toggle-stock-id="${item.id}"
+              class="toggle-stock-btn shrink-0 px-3 py-2 rounded-xl text-xs font-black transition-all ${
+                isSoldOut
+                  ? "bg-red-600 text-white hover:bg-red-700"
+                  : "bg-emerald-100 text-emerald-800 hover:bg-emerald-200"
+              }"
+            >
+              ${isSoldOut ? "🔴 已售完" : "🟢 供應中"}
+            </button>
+          </div>
+        `;
+      }).join("");
+
+      container.querySelectorAll(".toggle-stock-btn").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const id = btn.dataset.toggleStockId;
+          const idx = state.soldOutIds.indexOf(id);
+          if (idx === -1) state.soldOutIds.push(id);
+          else state.soldOutIds.splice(idx, 1);
+
+          saveSoldOutToStorage();
+          renderAdminMenuStockTab();
+          renderMenu();
+          showToast(idx === -1 ? "已將餐點設為「已售完」" : "已恢復餐點「供應中」");
+        });
+      });
+    }
+
+    // ==================== 初始化與全站事件綁定 ====================
+    document.addEventListener("DOMContentLoaded", () => {
+      loadPersistedData();
+      updateTopStatusAndStoreUI();
+      renderCategoryTabs();
+      renderMenu();
+      renderCart();
+
+      // 頂部導覽與橫幅按鈕
+      document.getElementById("bannerOpenAdminBtn").addEventListener("click", () => openAdminCenter("email"));
+      document.getElementById("openAdminCenterBtn").addEventListener("click", () => openAdminCenter("email"));
+      document.getElementById("openOrdersHistoryQuickBtn").addEventListener("click", () => openAdminCenter("orders"));
+
+      document.querySelectorAll(".hero-dining-btn").forEach((btn) => {
+        btn.addEventListener("click", () => syncDiningTypeUI(btn.dataset.heroDining));
+      });
+
+      // 搜尋框與清除按鈕
+      const searchInput = document.getElementById("searchInput");
+      const clearSearchBtn = document.getElementById("clearSearchBtn");
+      searchInput.addEventListener("input", (e) => {
+        state.searchQuery = e.target.value;
+        clearSearchBtn.classList.toggle("hidden", state.searchQuery.length === 0);
+        renderMenu();
+      });
+      clearSearchBtn.addEventListener("click", () => {
+        state.searchQuery = "";
+        searchInput.value = "";
+        clearSearchBtn.classList.add("hidden");
+        renderMenu();
+      });
+      document.getElementById("resetFilterBtn").addEventListener("click", () => {
+        state.selectedCategory = "全部";
+        state.searchQuery = "";
+        searchInput.value = "";
+        clearSearchBtn.classList.add("hidden");
+        renderCategoryTabs();
+        renderMenu();
+      });
+
+      // 手機版抽屜開關
+      document.getElementById("openMobileCartBtn").addEventListener("click", openMobileCartDrawer);
+      document.getElementById("mobileCartBackdrop").addEventListener("click", closeMobileCartDrawer);
+
+      // 客製化彈窗事件
+      document.getElementById("closeCustomModalBtn").addEventListener("click", closeCustomModal);
+      document.getElementById("customModalBackdrop").addEventListener("click", closeCustomModal);
+      document.getElementById("customQtyDecBtn").addEventListener("click", () => {
+        if (state.customModalState.qty > 1) {
+          state.customModalState.qty -= 1;
+          renderCustomModalOptions();
+        }
+      });
+      document.getElementById("customQtyIncBtn").addEventListener("click", () => {
+        state.customModalState.qty += 1;
+        renderCustomModalOptions();
+      });
+      document.querySelectorAll(".item-quick-note").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const inp = document.getElementById("customItemNoteInput");
+          const tag = btn.dataset.note;
+          const cur = inp.value.trim();
+          if (!cur) inp.value = tag;
+          else if (!cur.includes(tag)) inp.value = `${cur}、${tag}`;
+        });
+      });
+      document.getElementById("confirmAddCustomItemBtn").addEventListener("click", confirmAddCustomizedItem);
+
+      // 結帳視窗事件
+      document.getElementById("closeCheckoutModalBtn").addEventListener("click", closeCheckoutModal);
+      document.getElementById("cancelCheckoutBtn").addEventListener("click", closeCheckoutModal);
+      document.querySelectorAll('input[name="checkoutDiningType"]').forEach((r) => {
+        r.addEventListener("change", () => syncDiningTypeUI(r.value));
+      });
+
+      document.getElementById("checkoutForm").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        if (!validateCheckoutForm()) {
+          showToast("請完整填寫必填欄位再送出訂單", "error");
+          return;
+        }
+
+        const orderPayload = buildOrderPayload(false);
+        closeCheckoutModal();
+
+        const sendResult = await dispatchOrderEmail(orderPayload, { showProgressModal: true });
+        const completedOrder = { ...orderPayload, sendResult };
+
+        state.orderHistory.unshift(completedOrder);
+        saveOrderHistoryToStorage();
+        updateTopStatusAndStoreUI();
+
+        state.cart = [];
+        state.appliedPromoCode = null;
+        renderMenu();
+        renderCart();
+
+        showReceiptModal(completedOrder);
+      });
+
+      // 收據畫面事件
+      document.getElementById("receiptCopyBtn").addEventListener("click", () => {
+        if (state.lastReceiptOrder) copyTextSafely(state.lastReceiptOrder.plainText);
+      });
+      document.getElementById("receiptRetryBtn").addEventListener("click", async () => {
+        if (!state.lastReceiptOrder) return;
+        const btn = document.getElementById("receiptRetryBtn");
+        btn.disabled = true;
+        btn.innerHTML = `<span>⏳ 重試寄送中...</span>`;
+        const retryRes = await dispatchOrderEmail(state.lastReceiptOrder, { showProgressModal: false });
+        state.lastReceiptOrder.sendResult = retryRes;
+        saveOrderHistoryToStorage();
+        showReceiptModal(state.lastReceiptOrder);
+        btn.disabled = false;
+        btn.innerHTML = `<span>🔄 重試寄送至信箱</span>`;
+        showToast(retryRes.status.startsWith("sent_") ? "重試寄送成功！" : "重試連線未成功，請檢查網路", retryRes.status.startsWith("sent_") ? "success" : "warning");
+      });
+      document.getElementById("closeReceiptAndContinueBtn").addEventListener("click", () => {
+        document.getElementById("receiptModal").classList.add("hidden");
+      });
+
+      // 老闆後台管理中心事件
+      document.getElementById("closeAdminCenterBtn").addEventListener("click", closeAdminCenter);
+      document.querySelectorAll(".admin-tab-btn").forEach((btn) => {
+        btn.addEventListener("click", () => switchAdminTab(btn.dataset.adminTab));
+      });
+      document.querySelectorAll('input[name="emailEngineRadio"]').forEach((r) => {
+        r.addEventListener("change", updateAdminEngineFieldVisibility);
+      });
+
+      document.getElementById("downloadHtmlFileBtn").addEventListener("click", downloadSelfContainedHtmlFile);
+
+      document.getElementById("saveEmailConfigBtn").addEventListener("click", () => {
+        collectAndSaveEmailConfigFromForm();
+        appendDiagnosticsLog(`已儲存寄信設定：引擎 = ${getEngineDisplayName(state.emailConfig.engine)}`, "success");
+        showToast("寄信設定已儲存！");
+      });
+
+      document.getElementById("sendTestEmailBtn").addEventListener("click", async () => {
+        collectAndSaveEmailConfigFromForm();
+        const check = checkEmailConfigReady();
+        if (!check.ready) {
+          appendDiagnosticsLog(`無法執行測試：${check.reason}`, "error");
+          showToast(check.reason, "error");
+          return;
+        }
+
+        const btn = document.getElementById("sendTestEmailBtn");
+        btn.disabled = true;
+        btn.innerHTML = `<span>⏳ 正在發送測試訂單信...</span>`;
+
+        const testOrder = buildOrderPayload(true);
+        const res = await dispatchOrderEmail(testOrder, { showProgressModal: false });
+
+        btn.disabled = false;
+        btn.innerHTML = `<span>🚀 發送測試訂單信</span>`;
+
+        if (res.status.startsWith("sent_")) {
+          showToast("測試訂單信已成功寄出！請到您的收單信箱查收");
+        } else {
+          showToast("測試發送未成功，請檢視下方診斷終端機訊息", "error");
+        }
+      });
+
+      document.getElementById("clearDiagnosticsLogBtn").addEventListener("click", () => {
+        document.getElementById("diagnosticsLogConsole").innerHTML =
+          `<div class="text-slate-400">[日誌已清除] Web3Forms 金鑰就緒，等待執行測試或送單指令...</div>`;
+      });
+
+      document.getElementById("exportCsvBtn").addEventListener("click", exportOrdersToCSV);
+
+      document.getElementById("saveStoreSettingsBtn").addEventListener("click", () => {
+        const newName = document.getElementById("adminStoreNameInput").value.trim() || "美味小館";
+        const newFee = Math.max(0, Number(document.getElementById("adminDeliveryFeeInput").value) || 0);
+        const newThreshold = Math.max(0, Number(document.getElementById("adminFreeThresholdInput").value) || 0);
+
+        state.storeConfig = {
+          storeName: newName,
+          deliveryFee: newFee,
+          freeDeliveryThreshold: newThreshold
+        };
+        saveStoreConfigToStorage();
+        updateTopStatusAndStoreUI();
+        renderCart();
+        showToast("店鋪基本與外送費設定已更新！");
+      });
+    });
+  </script>
+</body>
+</html>
